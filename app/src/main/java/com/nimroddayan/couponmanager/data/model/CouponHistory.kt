@@ -9,21 +9,18 @@ import kotlinx.serialization.Serializable
 @Entity(
     foreignKeys = [
         ForeignKey(
-            entity = Category::class,
+            entity = Coupon::class,
             parentColumns = ["id"],
-            childColumns = ["categoryId"],
+            childColumns = ["couponId"],
             onDelete = ForeignKey.CASCADE
         )
     ]
 )
-data class Coupon(
+data class CouponHistory(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String,
-    val currentValue: Double,
-    val initialValue: Double,
-    val expirationDate: Long,
-    val categoryId: Long,
-    val redeemCode: String? = null,
-    val isArchived: Boolean = false,
-    val creationMessage: String? = null,
+    val couponId: Long,
+    val action: String,
+    val changeSummary: String,
+    val timestamp: Long = System.currentTimeMillis(),
+    val couponState: String,
 )

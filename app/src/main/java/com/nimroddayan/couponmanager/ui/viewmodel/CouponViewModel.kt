@@ -30,7 +30,11 @@ class CouponViewModel(
 
     fun insert(coupon: Coupon) {
         viewModelScope.launch {
-            couponRepository.insert(coupon)
+            try {
+                couponRepository.insert(coupon)
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
         }
     }
 
@@ -40,9 +44,27 @@ class CouponViewModel(
         }
     }
 
-    fun clearAll() {
+    fun delete(coupon: Coupon) {
         viewModelScope.launch {
-            couponRepository.clearAll()
+            couponRepository.delete(coupon)
+        }
+    }
+
+    fun archive(coupon: Coupon) {
+        viewModelScope.launch {
+            couponRepository.archive(coupon)
+        }
+    }
+
+    fun unarchive(coupon: Coupon) {
+        viewModelScope.launch {
+            couponRepository.unarchive(coupon)
+        }
+    }
+
+    fun use(coupon: Coupon, amount: Double) {
+        viewModelScope.launch {
+            couponRepository.use(coupon, amount)
         }
     }
 

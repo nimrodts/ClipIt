@@ -17,18 +17,16 @@ fun ConfirmationDialog(
         title = { Text(text = title) },
         text = { Text(text = message) },
         confirmButton = {
-            TextButton(
-                onClick = {
-                    onConfirm()
-                    onDismiss()
-                }
-            ) {
-                Text("Yes")
+            TextButton(onClick = {
+                onConfirm()
+                onDismiss()
+            }) {
+                Text("Confirm")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("No")
+                Text("Cancel")
             }
         }
     )

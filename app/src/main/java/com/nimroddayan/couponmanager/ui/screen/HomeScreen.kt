@@ -1,6 +1,8 @@
 package com.nimroddayan.couponmanager.ui.screen
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,11 +18,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -51,13 +62,19 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    coupons: List<Coupon>, 
-    categoriesViewModel: CategoryViewModel, 
-    couponViewModel: CouponViewModel, 
-    onAddCoupon: () -> Unit
+    coupons: List<Coupon>,
+    categoriesViewModel: CategoryViewModel,
+    couponViewModel: CouponViewModel,
+    onAddCoupon: () -> Unit,
+    onNavigateToHistory: (Long) -> Unit,
 ) {
-    val categories by categoriesViewModel.allCategories.collectAsState()
+    val categories by categoriesViewModel.allCategories.collectAsState(initial = emptyList())
     var showUseCouponDialog by remember { mutableStateOf<Coupon?>(null) }
+    var showEditCouponDialog by remember { mutableStateOf<Coupon?>(null) }
+    var showArchiveConfirmationDialog by remember { mutableStateOf<Coupon?>(null) }
+    var showDeleteConfirmationDialog by remember { mutableStateOf<Coupon?>(null) }
+    var showRedeemCodeDialog by remember { mutableStateOf<String?>(null) }
+    var showOriginalMessageDialog by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         floatingActionButton = {
@@ -81,9 +98,15 @@ fun HomeScreen(
                     val category = categories.find { it.id == coupon.categoryId }
                     if (category != null) {
                         CouponItem(
-                            coupon = coupon, 
+                            coupon = coupon,
                             category = category,
-                            onUseClick = { showUseCouponDialog = coupon }
+                            onUseClick = { showUseCouponDialog = coupon },
+                            onEditClick = { showEditCouponDialog = coupon },
+                            onArchiveClick = { showArchiveConfirmationDialog = coupon },
+                            onDeleteClick = { showDeleteConfirmationDialog = coupon },
+                            onLongPress = { showRedeemCodeDialog = coupon.redeemCode },
+                            onHistoryClick = { onNavigateToHistory(coupon.id) },
+                            onViewMessageClick = { showOriginalMessageDialog = coupon.creationMessage }
                         )
                     }
                 }
@@ -95,26 +118,82 @@ fun HomeScreen(
         UseCouponDialog(
             coupon = coupon,
             onConfirm = { amount ->
-                val newBalance = coupon.currentValue - amount
-                val updatedCoupon = if (newBalance <= 0) {
-                    coupon.copy(currentValue = 0.0, isArchived = true)
-                } else {
-                    coupon.copy(currentValue = newBalance)
-                }
-                couponViewModel.update(updatedCoupon)
+                couponViewModel.use(coupon, amount)
+                showUseCouponDialog = null
             },
             onDismiss = { showUseCouponDialog = null }
         )
     }
+
+    showEditCouponDialog?.let { coupon ->
+        EditCouponDialog(
+            coupon = coupon,
+            categoryViewModel = categoriesViewModel,
+            couponViewModel = couponViewModel,
+            onDismiss = { showEditCouponDialog = null }
+        )
+    }
+
+    showArchiveConfirmationDialog?.let { coupon ->
+        ConfirmationDialog(
+            onConfirm = {
+                couponViewModel.archive(coupon)
+                showArchiveConfirmationDialog = null
+            },
+            onDismiss = { showArchiveConfirmationDialog = null },
+            title = "Archive Coupon",
+            message = "Are you sure you want to archive this coupon?"
+        )
+    }
+
+    showDeleteConfirmationDialog?.let { coupon ->
+        ConfirmationDialog(
+            onConfirm = {
+                couponViewModel.delete(coupon)
+                showDeleteConfirmationDialog = null
+            },
+            onDismiss = { showDeleteConfirmationDialog = null },
+            title = "Delete Coupon",
+            message = "Are you sure you want to delete this coupon? This action cannot be undone."
+        )
+    }
+
+    showRedeemCodeDialog?.let { redeemCode ->
+        RedeemCodeDialog(
+            redeemCode = redeemCode,
+            onDismiss = { showRedeemCodeDialog = null }
+        )
+    }
+
+    showOriginalMessageDialog?.let { message ->
+        MessageDialog(
+            message = message,
+            onDismiss = { showOriginalMessageDialog = null }
+        )
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CouponItem(
-    coupon: Coupon, 
-    category: com.nimroddayan.couponmanager.data.model.Category, 
-    onUseClick: () -> Unit
+    coupon: Coupon,
+    category: com.nimroddayan.couponmanager.data.model.Category,
+    onUseClick: () -> Unit,
+    onEditClick: () -> Unit,
+    onArchiveClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onLongPress: () -> Unit,
+    onHistoryClick: () -> Unit,
+    onViewMessageClick: () -> Unit,
 ) {
-    Surface {
+    var showMenu by remember { mutableStateOf(false) }
+
+    Surface(
+        modifier = Modifier.combinedClickable(
+            onClick = { /* No action on single click */ },
+            onLongClick = onLongPress
+        )
+    ) {
         Column {
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -141,15 +220,69 @@ fun CouponItem(
                     val expirationColor = if (coupon.expirationDate < System.currentTimeMillis()) MaterialTheme.colorScheme.error else Color.Unspecified
                     Text(text = expirationText, color = expirationColor, fontSize = 12.sp)
                 }
-                Column {
+                Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = "₪${String.format("%.2f", coupon.currentValue)} / ₪${String.format("%.2f", coupon.initialValue)}",
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = onUseClick) {
-                        Text("Use")
+                    Row {
+                        IconButton(onClick = onUseClick) {
+                            Icon(Icons.Default.ShoppingCart, contentDescription = "Use Coupon")
+                        }
+                        Box {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Edit") },
+                                    onClick = {
+                                        onEditClick()
+                                        showMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = "Edit") }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Archive") },
+                                    onClick = {
+                                        onArchiveClick()
+                                        showMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Archive, contentDescription = "Archive") }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("History") },
+                                    onClick = {
+                                        onHistoryClick()
+                                        showMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.History, contentDescription = "History") }
+                                )
+                                coupon.creationMessage?.let {
+                                    DropdownMenuItem(
+                                        text = { Text("View Original Message") },
+                                        onClick = {
+                                            onViewMessageClick()
+                                            showMenu = false
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Message, contentDescription = "View Original Message") }
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text("Delete") },
+                                    onClick = {
+                                        onDeleteClick()
+                                        showMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = "Delete") }
+                                )
+                            }
+                        }
                     }
                 }
             }
