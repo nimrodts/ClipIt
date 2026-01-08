@@ -4,18 +4,45 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nimroddayan.couponmanager.data.CouponRepository
 import com.nimroddayan.couponmanager.data.DuplicateRedeemCodeException
+import com.nimroddayan.couponmanager.data.UserPreferencesRepository
 import com.nimroddayan.couponmanager.data.gemini.GeminiCouponExtractor
 import com.nimroddayan.couponmanager.data.gemini.ParsedCoupon
 import com.nimroddayan.couponmanager.data.model.Coupon
+import com.nimroddayan.couponmanager.data.model.SortOption
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class CouponViewModel(
-    private val couponRepository: CouponRepository,
-    private val geminiCouponExtractor: GeminiCouponExtractor,
+        private val couponRepository: CouponRepository,
+        private val geminiCouponExtractor: GeminiCouponExtractor,
+        private val userPreferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
+
+    val sortOption: StateFlow<SortOption> =
+            userPreferencesRepository
+                    .sortOption
+                    .map { optionName ->
+                        try {
+                            if (optionName != null) SortOption.valueOf(optionName)
+                            else SortOption.DateAddedDesc
+                        } catch (e: IllegalArgumentException) {
+                            SortOption.DateAddedDesc
+                        }
+                    }
+                    .stateIn(
+                            viewModelScope,
+                            SharingStarted.WhileSubscribed(5000),
+                            SortOption.DateAddedDesc
+                    )
+
+    fun saveSortOption(option: SortOption) {
+        viewModelScope.launch { userPreferencesRepository.saveSortOption(option.name) }
+    }
 
     val allCoupons = couponRepository.allCoupons
     val archivedCoupons = couponRepository.archivedCoupons
@@ -43,32 +70,29 @@ class CouponViewModel(
     }
 
     fun update(coupon: Coupon) {
-        viewModelScope.launch {
-            couponRepository.update(coupon)
-        }
+        viewModelScope.launch { couponRepository.update(coupon) }
     }
 
     fun delete(coupon: Coupon) {
-        viewModelScope.launch {
-            couponRepository.delete(coupon)
-        }
+        viewModelScope.launch { couponRepository.delete(coupon) }
     }
 
     fun archive(coupon: Coupon) {
-        viewModelScope.launch {
-            couponRepository.archive(coupon)
-        }
+        viewModelScope.launch { couponRepository.archive(coupon) }
     }
 
     fun unarchive(coupon: Coupon) {
-        viewModelScope.launch {
-            couponRepository.unarchive(coupon)
-        }
+        viewModelScope.launch { couponRepository.unarchive(coupon) }
     }
 
     fun use(coupon: Coupon, amount: Double) {
+        viewModelScope.launch { couponRepository.use(coupon, amount) }
+    }
+
+    fun redeemOneTime(coupon: Coupon) {
         viewModelScope.launch {
-            couponRepository.use(coupon, amount)
+            couponRepository.use(coupon, coupon.currentValue)
+            couponRepository.archive(coupon)
         }
     }
 

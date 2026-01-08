@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -65,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nimroddayan.couponmanager.data.model.Category
 import com.nimroddayan.couponmanager.data.model.Coupon
+import com.nimroddayan.couponmanager.data.model.SortOption
 import com.nimroddayan.couponmanager.ui.viewmodel.CategoryViewModel
 import com.nimroddayan.couponmanager.ui.viewmodel.CouponViewModel
 import com.nimroddayan.couponmanager.util.getContrastColor
@@ -87,20 +90,38 @@ fun HomeScreen(
     var showEditCouponDialog by remember { mutableStateOf<Coupon?>(null) }
     var showArchiveConfirmationDialog by remember { mutableStateOf<Coupon?>(null) }
     var showDeleteConfirmationDialog by remember { mutableStateOf<Coupon?>(null) }
+    var showOneTimeRedeemDialog by remember { mutableStateOf<Coupon?>(null) }
     var showRedeemCodeDialog by remember { mutableStateOf<String?>(null) }
     var showOriginalMessageDialog by remember { mutableStateOf<String?>(null) }
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategories by remember { mutableStateOf(emptySet<Category>()) }
+    val sortOption by couponViewModel.sortOption.collectAsState()
+    var showSortMenu by remember { mutableStateOf(false) }
 
     val filteredCoupons =
-            coupons.filter { coupon ->
-                val searchMatch = coupon.name.contains(searchQuery, ignoreCase = true)
-                val categoryMatch =
-                        selectedCategories.isEmpty() ||
-                                selectedCategories.any { it.id == coupon.categoryId }
-                searchMatch && categoryMatch
-            }
+            coupons
+                    .filter { coupon ->
+                        val searchMatch = coupon.name.contains(searchQuery, ignoreCase = true)
+                        val categoryMatch =
+                                selectedCategories.isEmpty() ||
+                                        selectedCategories.any { it.id == coupon.categoryId }
+                        searchMatch && categoryMatch
+                    }
+                    .sortedWith(
+                            when (sortOption) {
+                                SortOption.NameAsc ->
+                                        compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }
+                                SortOption.NameDesc ->
+                                        compareByDescending(String.CASE_INSENSITIVE_ORDER) {
+                                            it.name
+                                        }
+                                SortOption.DateAsc -> compareBy { it.expirationDate }
+                                SortOption.DateDesc -> compareByDescending { it.expirationDate }
+                                SortOption.DateAddedAsc -> compareBy { it.id }
+                                SortOption.DateAddedDesc -> compareByDescending { it.id }
+                            }
+                    )
 
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
@@ -125,21 +146,104 @@ fun HomeScreen(
             }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
-            OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    label = { Text("Search Coupons") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
-                    colors =
-                            androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                    focusedContainerColor = MaterialTheme.colorScheme.surface
-                            ),
-                    modifier = Modifier.fillMaxWidth().padding(16.dp)
-            )
+            Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        label = { Text("Search Coupons") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+                        colors =
+                                androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                        focusedContainerColor = MaterialTheme.colorScheme.surface
+                                ),
+                        modifier = Modifier.weight(1f)
+                )
+
+                Box {
+                    IconButton(onClick = { showSortMenu = true }) {
+                        Icon(Icons.Default.Sort, contentDescription = "Sort")
+                    }
+                    DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                                text = { Text("Date Added (Newest)") },
+                                onClick = {
+                                    couponViewModel.saveSortOption(SortOption.DateAddedDesc)
+                                    showSortMenu = false
+                                },
+                                trailingIcon = {
+                                    if (sortOption == SortOption.DateAddedDesc)
+                                            Icon(Icons.Default.Check, null)
+                                }
+                        )
+                        DropdownMenuItem(
+                                text = { Text("Date Added (Oldest)") },
+                                onClick = {
+                                    couponViewModel.saveSortOption(SortOption.DateAddedAsc)
+                                    showSortMenu = false
+                                },
+                                trailingIcon = {
+                                    if (sortOption == SortOption.DateAddedAsc)
+                                            Icon(Icons.Default.Check, null)
+                                }
+                        )
+                        DropdownMenuItem(
+                                text = { Text("Expiration (Soonest)") },
+                                onClick = {
+                                    couponViewModel.saveSortOption(SortOption.DateAsc)
+                                    showSortMenu = false
+                                },
+                                trailingIcon = {
+                                    if (sortOption == SortOption.DateAsc)
+                                            Icon(Icons.Default.Check, null)
+                                }
+                        )
+                        DropdownMenuItem(
+                                text = { Text("Expiration (Latest)") },
+                                onClick = {
+                                    couponViewModel.saveSortOption(SortOption.DateDesc)
+                                    showSortMenu = false
+                                },
+                                trailingIcon = {
+                                    if (sortOption == SortOption.DateDesc)
+                                            Icon(Icons.Default.Check, null)
+                                }
+                        )
+                        DropdownMenuItem(
+                                text = { Text("Name (A-Z)") },
+                                onClick = {
+                                    couponViewModel.saveSortOption(SortOption.NameAsc)
+                                    showSortMenu = false
+                                },
+                                trailingIcon = {
+                                    if (sortOption == SortOption.NameAsc)
+                                            Icon(Icons.Default.Check, null)
+                                }
+                        )
+                        DropdownMenuItem(
+                                text = { Text("Name (Z-A)") },
+                                onClick = {
+                                    couponViewModel.saveSortOption(SortOption.NameDesc)
+                                    showSortMenu = false
+                                },
+                                trailingIcon = {
+                                    if (sortOption == SortOption.NameDesc)
+                                            Icon(Icons.Default.Check, null)
+                                }
+                        )
+                    }
+                }
+            }
 
             LazyRow(
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -176,7 +280,13 @@ fun HomeScreen(
                         CouponItem(
                                 coupon = coupon,
                                 category = category,
-                                onUseClick = { showUseCouponDialog = coupon },
+                                onUseClick = {
+                                    if (coupon.isOneTime) {
+                                        showOneTimeRedeemDialog = coupon
+                                    } else {
+                                        showUseCouponDialog = coupon
+                                    }
+                                },
                                 onEditClick = { showEditCouponDialog = coupon },
                                 onArchiveClick = { showArchiveConfirmationDialog = coupon },
                                 onDeleteClick = { showDeleteConfirmationDialog = coupon },
@@ -234,6 +344,19 @@ fun HomeScreen(
                 title = "Delete Coupon",
                 message =
                         "Are you sure you want to delete this coupon? This action cannot be undone."
+        )
+    }
+
+    showOneTimeRedeemDialog?.let { coupon ->
+        ConfirmationDialog(
+                onConfirm = {
+                    couponViewModel.redeemOneTime(coupon)
+                    showOneTimeRedeemDialog = null
+                },
+                onDismiss = { showOneTimeRedeemDialog = null },
+                title = "Redeem Coupon",
+                message =
+                        "Are you sure you want to redeem this coupon? It will be marked as used and archived."
         )
     }
 
@@ -315,6 +438,22 @@ fun CouponItem(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp)
                     )
+
+                    if (coupon.isOneTime) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        androidx.compose.material3.Surface(
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.tertiaryContainer,
+                        ) {
+                            Text(
+                                    text = "1x Single Use",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
                     val expirationText =
                             "Expires: ${SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).format(Date(coupon.expirationDate))}"
                     val expirationColor =
@@ -324,22 +463,25 @@ fun CouponItem(
                     Text(text = expirationText, color = expirationColor, fontSize = 12.sp)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                            text = "₪${String.format("%.2f", coupon.currentValue)}",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                            text = "/ ₪${String.format("%.2f", coupon.initialValue)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (!coupon.isOneTime) {
+                        Text(
+                                text = "₪${String.format("%.2f", coupon.currentValue)}",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                                text = "/ ₪${String.format("%.2f", coupon.initialValue)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     Row {
                         IconButton(onClick = onUseClick, modifier = Modifier.size(32.dp)) {
                             Icon(
-                                    Icons.Default.ShoppingCart,
+                                    if (coupon.isOneTime) Icons.Default.Check
+                                    else Icons.Default.ShoppingCart,
                                     contentDescription = "Use Coupon",
                                     modifier = Modifier.size(20.dp)
                             )
@@ -428,14 +570,16 @@ fun CouponItem(
                     }
                 }
             }
-            LinearProgressIndicator(
-                    progress = {
-                        (coupon.currentValue / coupon.initialValue).toFloat().coerceIn(0f, 1f)
-                    },
-                    modifier = Modifier.fillMaxWidth().height(4.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+            if (!coupon.isOneTime) {
+                LinearProgressIndicator(
+                        progress = {
+                            (coupon.currentValue / coupon.initialValue).toFloat().coerceIn(0f, 1f)
+                        },
+                        modifier = Modifier.fillMaxWidth().height(4.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            }
         }
     }
 }

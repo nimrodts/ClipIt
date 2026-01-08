@@ -20,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -28,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,82 +43,98 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.nimroddayan.couponmanager.MainActivity
 import com.nimroddayan.couponmanager.data.DatabaseManager
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.CardDefaults
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatabaseSettingsScreen(
-    onNavigateUp: () -> Unit,
-    onResetDatabase: () -> Unit,
+        onNavigateUp: () -> Unit,
+        onResetDatabase: () -> Unit,
 ) {
     var showResetConfirmationDialog by remember { mutableStateOf(false) }
     var showImportSuccessDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val databaseManager = remember { DatabaseManager(context) }
 
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/octet-stream"),
-        onResult = { uri ->
-            uri?.let { databaseManager.exportDatabase(it) }
-        }
-    )
+    val exportLauncher =
+            rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.CreateDocument("application/octet-stream"),
+                    onResult = { uri -> uri?.let { databaseManager.exportDatabase(it) } }
+            )
 
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri ->
-            if (uri != null) {
-                if (databaseManager.importDatabase(uri)) {
-                    showImportSuccessDialog = true
-                }
-            }
-        }
-    )
+    val importLauncher =
+            rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.GetContent(),
+                    onResult = { uri ->
+                        if (uri != null) {
+                            if (databaseManager.importDatabase(uri)) {
+                                showImportSuccessDialog = true
+                            }
+                        }
+                    }
+            )
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Database Settings") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        }
+            topBar = {
+                TopAppBar(
+                        title = { Text("Database Settings") },
+                        navigationIcon = {
+                            IconButton(onClick = onNavigateUp) {
+                                Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back"
+                                )
+                            }
+                        },
+                        colors =
+                                TopAppBarDefaults.topAppBarColors(
+                                        containerColor = MaterialTheme.colorScheme.background,
+                                        titleContentColor = MaterialTheme.colorScheme.primary,
+                                        navigationIconContentColor =
+                                                MaterialTheme.colorScheme.primary,
+                                        actionIconContentColor = MaterialTheme.colorScheme.primary
+                                )
+                )
+            }
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(it)
-                .background(MaterialTheme.colorScheme.background)
+                modifier =
+                        Modifier.fillMaxSize()
+                                .padding(it)
+                                .background(MaterialTheme.colorScheme.background)
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 ElevatedCard(
-                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.elevatedCardElevation(2.dp)
+                        colors =
+                                CardDefaults.elevatedCardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                        elevation = CardDefaults.elevatedCardElevation(2.dp)
                 ) {
                     Column {
                         SettingsItem(
-                            icon = Icons.Filled.ArrowUpward,
-                            title = "Import Database",
-                            onClick = { importLauncher.launch("*/*") }
+                                icon = Icons.Filled.ArrowUpward,
+                                title = "Import Database",
+                                onClick = { importLauncher.launch("*/*") }
                         )
-                        HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                        SettingsItem(
-                            icon = Icons.Filled.ArrowDownward,
-                            title = "Export Database",
-                            onClick = { exportLauncher.launch("coupon_database.db") }
+                        HorizontalDivider(
+                                modifier = Modifier.padding(start = 56.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
-                        HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         SettingsItem(
-                            icon = Icons.Filled.Delete,
-                            title = "Reset Database",
-                            onClick = { showResetConfirmationDialog = true }
+                                icon = Icons.Filled.ArrowDownward,
+                                title = "Export Database",
+                                onClick = { exportLauncher.launch("coupon_database.db") }
+                        )
+                        HorizontalDivider(
+                                modifier = Modifier.padding(start = 56.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                        SettingsItem(
+                                icon = Icons.Filled.Delete,
+                                title = "Reset Database",
+                                onClick = { showResetConfirmationDialog = true }
                         )
                     }
                 }
@@ -125,19 +144,20 @@ fun DatabaseSettingsScreen(
 
     if (showResetConfirmationDialog) {
         ConfirmationDialog(
-            onConfirm = onResetDatabase,
-            onDismiss = { showResetConfirmationDialog = false },
-            title = "Reset Database",
-            message = "Are you sure you want to reset the database? This will permanently delete all your coupons and categories."
+                onConfirm = onResetDatabase,
+                onDismiss = { showResetConfirmationDialog = false },
+                title = "Reset Database",
+                message =
+                        "Are you sure you want to reset the database? This will permanently delete all your coupons and categories."
         )
     }
 
     if (showImportSuccessDialog) {
         ConfirmationDialog(
-            onConfirm = { restartApp(context) },
-            onDismiss = { restartApp(context) },
-            title = "Import Successful",
-            message = "The database has been imported successfully. The app will now restart."
+                onConfirm = { restartApp(context) },
+                onDismiss = { restartApp(context) },
+                title = "Import Successful",
+                message = "The database has been imported successfully. The app will now restart."
         )
     }
 }
@@ -151,29 +171,28 @@ private fun restartApp(context: Context) {
 
 @Composable
 private fun SettingsItem(
-    icon: ImageVector,
-    title: String,
-    onClick: () -> Unit,
+        icon: ImageVector,
+        title: String,
+        onClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = icon, contentDescription = title, tint = MaterialTheme.colorScheme.onSurface)
+        Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = MaterialTheme.colorScheme.onSurface
+        )
         Text(
-            text = title,
-            modifier = Modifier
-                .padding(start = 16.dp)
-                .weight(1f),
-            color = MaterialTheme.colorScheme.onSurface
+                text = title,
+                modifier = Modifier.padding(start = 16.dp).weight(1f),
+                color = MaterialTheme.colorScheme.onSurface
         )
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
         )
     }
 }

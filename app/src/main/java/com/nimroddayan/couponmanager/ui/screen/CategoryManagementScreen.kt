@@ -19,15 +19,16 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,15 +44,10 @@ import com.nimroddayan.couponmanager.data.model.Category
 import com.nimroddayan.couponmanager.ui.viewmodel.CategoryViewModel
 import com.nimroddayan.couponmanager.util.getContrastColor
 import com.nimroddayan.couponmanager.util.getIconByName
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.CardDefaults
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CategoryManagementScreen(
-    viewModel: CategoryViewModel,
-    onNavigateUp: () -> Unit
-) {
+fun CategoryManagementScreen(viewModel: CategoryViewModel, onNavigateUp: () -> Unit) {
     val categories by viewModel.allCategories.collectAsState()
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf<Category?>(null) }
@@ -59,75 +55,82 @@ fun CategoryManagementScreen(
 
     if (showAddCategoryDialog) {
         AddCategoryDialog(
-            onAddCategory = { name, color, icon ->
-                viewModel.insert(Category(name = name, colorHex = color, iconName = icon))
-            },
-            onDismiss = { showAddCategoryDialog = false }
+                onAddCategory = { name, color, icon ->
+                    viewModel.insert(Category(name = name, colorHex = color, iconName = icon))
+                },
+                onDismiss = { showAddCategoryDialog = false }
         )
     }
 
     if (categoryToDelete != null) {
         ConfirmationDialog(
-            title = "Delete Category",
-            message = "Are you sure you want to delete '${categoryToDelete?.name}'? This action cannot be undone.",
-            onConfirm = {
-                categoryToDelete?.let { viewModel.delete(it) }
-                categoryToDelete = null
-            },
-            onDismiss = { categoryToDelete = null }
+                title = "Delete Category",
+                message =
+                        "Are you sure you want to delete '${categoryToDelete?.name}'? This action cannot be undone.",
+                onConfirm = {
+                    categoryToDelete?.let { viewModel.delete(it) }
+                    categoryToDelete = null
+                },
+                onDismiss = { categoryToDelete = null }
         )
     }
 
     if (categoryToRename != null) {
         RenameCategoryDialog(
-            category = categoryToRename!!,
-            onConfirm = { newName ->
-                categoryToRename?.let {
-                    viewModel.update(it.copy(name = newName))
-                }
-                categoryToRename = null
-            },
-            onDismiss = { categoryToRename = null }
+                category = categoryToRename!!,
+                onConfirm = { newName ->
+                    categoryToRename?.let { viewModel.update(it.copy(name = newName)) }
+                    categoryToRename = null
+                },
+                onDismiss = { categoryToRename = null }
         )
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Manage Categories") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showAddCategoryDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Category")
-                    }
-                }
-            )
-        }
+            topBar = {
+                TopAppBar(
+                        title = { Text("Manage Categories") },
+                        navigationIcon = {
+                            IconButton(onClick = onNavigateUp) {
+                                Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back"
+                                )
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { showAddCategoryDialog = true }) {
+                                Icon(Icons.Default.Add, contentDescription = "Add Category")
+                            }
+                        },
+                        colors =
+                                TopAppBarDefaults.topAppBarColors(
+                                        containerColor = MaterialTheme.colorScheme.background,
+                                        titleContentColor = MaterialTheme.colorScheme.primary,
+                                        navigationIconContentColor =
+                                                MaterialTheme.colorScheme.primary,
+                                        actionIconContentColor = MaterialTheme.colorScheme.primary
+                                )
+                )
+            }
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                modifier =
+                        Modifier.padding(paddingValues)
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background)
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
             LazyColumn(
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(categories) { category ->
                     CategoryItem(
-                        category = category,
-                        onEditClick = { categoryToRename = category },
-                        onDeleteClick = { categoryToDelete = category }
+                            category = category,
+                            onEditClick = { categoryToRename = category },
+                            onDeleteClick = { categoryToDelete = category }
                     )
                 }
             }
@@ -137,46 +140,53 @@ fun CategoryManagementScreen(
 
 @Composable
 fun CategoryItem(
-    category: Category,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit,
+        category: Category,
+        onEditClick: () -> Unit,
+        onDeleteClick: () -> Unit,
 ) {
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.elevatedCardElevation(2.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.elevatedCardElevation(2.dp),
+            colors =
+                    CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                    )
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(Color(android.graphics.Color.parseColor(category.colorHex)))
-        ) {
-            Icon(
-                imageVector = getIconByName(category.iconName),
-                contentDescription = category.name,
-                modifier = Modifier.align(Alignment.Center),
-                tint = getContrastColor(category.colorHex)
+            Box(
+                    modifier =
+                            Modifier.size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                            Color(
+                                                    android.graphics.Color.parseColor(
+                                                            category.colorHex
+                                                    )
+                                            )
+                                    )
+            ) {
+                Icon(
+                        imageVector = getIconByName(category.iconName),
+                        contentDescription = category.name,
+                        modifier = Modifier.align(Alignment.Center),
+                        tint = getContrastColor(category.colorHex)
+                )
+            }
+            Text(
+                    text = category.name,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyLarge
             )
-        }
-        Text(
-            text = category.name,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyLarge
-        )
-        IconButton(onClick = onEditClick) {
-            Icon(Icons.Default.Edit, contentDescription = "Rename Category")
-        }
-        IconButton(onClick = onDeleteClick) {
-            Icon(Icons.Default.Delete, contentDescription = "Delete Category")
+            IconButton(onClick = onEditClick) {
+                Icon(Icons.Default.Edit, contentDescription = "Rename Category")
+            }
+            IconButton(onClick = onDeleteClick) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete Category")
+            }
         }
     }
-}
 }
