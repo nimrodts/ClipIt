@@ -54,6 +54,8 @@ import com.nimroddayan.couponmanager.util.getIconByName
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.CardDefaults
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,7 +114,11 @@ fun ArchivedCouponsScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(modifier = Modifier.padding(paddingValues)) {
+        LazyColumn(
+            modifier = Modifier.padding(paddingValues),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             items(archivedCoupons) { coupon ->
                 val category = categories.find { it.id == coupon.categoryId }
                 ArchivedCouponItem(
@@ -141,10 +147,14 @@ fun ArchivedCouponItem(
     val categoryColor = category?.colorHex ?: "#808080"
     val categoryIcon = category?.iconName ?: "help"
 
-    Surface {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.elevatedCardElevation(2.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
         Column {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {

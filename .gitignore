@@ -73,3 +73,5 @@ google-services.json
 
 # Windows
 Thumbs.db
+
+.agent/

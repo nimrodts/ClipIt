@@ -43,6 +43,8 @@ import com.nimroddayan.couponmanager.data.model.Category
 import com.nimroddayan.couponmanager.ui.viewmodel.CategoryViewModel
 import com.nimroddayan.couponmanager.util.getContrastColor
 import com.nimroddayan.couponmanager.util.getIconByName
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.CardDefaults
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,6 +56,40 @@ fun CategoryManagementScreen(
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf<Category?>(null) }
     var categoryToRename by remember { mutableStateOf<Category?>(null) }
+
+    if (showAddCategoryDialog) {
+        AddCategoryDialog(
+            onAddCategory = { name, color, icon ->
+                viewModel.insert(Category(name = name, colorHex = color, iconName = icon))
+            },
+            onDismiss = { showAddCategoryDialog = false }
+        )
+    }
+
+    if (categoryToDelete != null) {
+        ConfirmationDialog(
+            title = "Delete Category",
+            message = "Are you sure you want to delete '${categoryToDelete?.name}'? This action cannot be undone.",
+            onConfirm = {
+                categoryToDelete?.let { viewModel.delete(it) }
+                categoryToDelete = null
+            },
+            onDismiss = { categoryToDelete = null }
+        )
+    }
+
+    if (categoryToRename != null) {
+        RenameCategoryDialog(
+            category = categoryToRename!!,
+            onConfirm = { newName ->
+                categoryToRename?.let {
+                    viewModel.update(it.copy(name = newName))
+                }
+                categoryToRename = null
+            },
+            onDismiss = { categoryToRename = null }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -82,51 +118,20 @@ fun CategoryManagementScreen(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             Spacer(modifier = Modifier.height(32.dp))
-            Surface {
-                LazyColumn {
-                    items(categories) { category ->
-                        CategoryItem(
-                            category = category,
-                            onEditClick = { categoryToRename = category },
-                            onDeleteClick = { categoryToDelete = category }
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(start = 72.dp))
-                    }
+
+            LazyColumn(
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(categories) { category ->
+                    CategoryItem(
+                        category = category,
+                        onEditClick = { categoryToRename = category },
+                        onDeleteClick = { categoryToDelete = category }
+                    )
                 }
             }
         }
-    }
-
-    if (showAddCategoryDialog) {
-        AddCategoryDialog(
-            onAddCategory = { name, color, icon ->
-                viewModel.insert(Category(name = name, colorHex = color, iconName = icon))
-            },
-            onDismiss = { showAddCategoryDialog = false }
-        )
-    }
-
-    categoryToRename?.let { category ->
-        RenameCategoryDialog(
-            category = category,
-            onConfirm = { newName ->
-                viewModel.update(category.copy(name = newName))
-                categoryToRename = null
-            },
-            onDismiss = { categoryToRename = null }
-        )
-    }
-
-    categoryToDelete?.let {
-        ConfirmationDialog(
-            onConfirm = {
-                viewModel.delete(it)
-                categoryToDelete = null
-            },
-            onDismiss = { categoryToDelete = null },
-            title = "Delete Category",
-            message = "Are you sure you want to delete this category? All coupons in this category will be moved to the \"None\" category."
-        )
     }
 }
 
@@ -136,13 +141,18 @@ fun CategoryItem(
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.elevatedCardElevation(2.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -168,4 +178,5 @@ fun CategoryItem(
             Icon(Icons.Default.Delete, contentDescription = "Delete Category")
         }
     }
+}
 }

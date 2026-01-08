@@ -39,6 +39,12 @@ import androidx.compose.ui.unit.dp
 import com.nimroddayan.couponmanager.data.gemini.GeminiModel
 import com.nimroddayan.couponmanager.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,129 +87,120 @@ fun AiSettingsScreen(
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
 
             Column(
                 modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(16.dp)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.Key, contentDescription = "Gemini API Key")
-                    Text(
-                        text = "Gemini API Key",
-                        modifier = Modifier.padding(start = 16.dp),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-                OutlinedTextField(
-                    value = apiKey,
-                    onValueChange = { apiKey = it },
-                    label = { Text("Gemini API Key") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true
-                )
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            viewModel.saveGeminiApiKey(apiKey)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
+                // API Key Section
+                ElevatedCard(
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.elevatedCardElevation(2.dp)
                 ) {
-                    Text("Save")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Column(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "Gemini Model",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded },
-                    modifier = Modifier.padding(top = 8.dp)
-                ) {
-                    OutlinedTextField(
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth(),
-                        readOnly = true,
-                        value = selectedModel.modelName,
-                        onValueChange = {},
-                        label = { Text("Model") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                    ) {
-                        GeminiModel.values().forEach { model ->
-                            DropdownMenuItem(
-                                text = { Text(model.modelName) },
-                                onClick = {
-                                    selectedModel = model
-                                    expanded = false
-                                },
-                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Key, contentDescription = "Gemini API Key", tint = MaterialTheme.colorScheme.primary)
+                            Text(
+                                text = "Gemini API Key",
+                                modifier = Modifier.padding(start = 16.dp),
+                                style = MaterialTheme.typography.titleMedium
                             )
+                        }
+                        OutlinedTextField(
+                            value = apiKey,
+                            onValueChange = { apiKey = it },
+                            label = { Text("API Key") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 16.dp),
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true
+                        )
+                        Button(
+                            onClick = { coroutineScope.launch { viewModel.saveGeminiApiKey(apiKey) } },
+                            modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
+                        ) {
+                            Text("Save Key")
                         }
                     }
                 }
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            viewModel.saveGeminiModel(selectedModel)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
+
+                // Model Selection Section
+                ElevatedCard(
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.elevatedCardElevation(2.dp)
                 ) {
-                    Text("Save")
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Model Configuration", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        ExposedDropdownMenuBox(
+                            expanded = expanded,
+                            onExpandedChange = { expanded = !expanded },
+                        ) {
+                            OutlinedTextField(
+                                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                readOnly = true,
+                                value = selectedModel.modelName,
+                                onValueChange = {},
+                                label = { Text("Gemini Model") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false },
+                            ) {
+                                GeminiModel.values().forEach { model ->
+                                    DropdownMenuItem(
+                                        text = { Text(model.modelName) },
+                                        onClick = {
+                                            selectedModel = model
+                                            expanded = false
+                                        },
+                                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                                    )
+                                }
+                            }
+                        }
+                        Button(
+                            onClick = { coroutineScope.launch { viewModel.saveGeminiModel(selectedModel) } },
+                            modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
+                        ) {
+                            Text("Update Model")
+                        }
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Column(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "Temperature: %.2f".format(temperature),
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Slider(
-                    value = temperature,
-                    onValueChange = { temperature = it },
-                    valueRange = 0f..1f,
-                    steps = 19
-                )
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            viewModel.saveGeminiTemperature(temperature)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
+                // Parameters Section
+                ElevatedCard(
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.elevatedCardElevation(2.dp)
                 ) {
-                    Text("Save")
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Parameters", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Temperature: %.2f".format(temperature),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Slider(
+                            value = temperature,
+                            onValueChange = { temperature = it },
+                            valueRange = 0f..1f,
+                            steps = 19,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                        Button(
+                            onClick = { coroutineScope.launch { viewModel.saveGeminiTemperature(temperature) } },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Save Parameters")
+                        }
+                    }
                 }
             }
         }

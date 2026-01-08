@@ -40,6 +40,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.nimroddayan.couponmanager.MainActivity
 import com.nimroddayan.couponmanager.data.DatabaseManager
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.CardDefaults
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,24 +91,34 @@ fun DatabaseSettingsScreen(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             Spacer(modifier = Modifier.height(32.dp))
-            Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
-                SettingsItem(
-                    icon = Icons.Filled.ArrowUpward,
-                    title = "Import Database",
-                    onClick = { importLauncher.launch("*/*") }
-                )
-                HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-                SettingsItem(
-                    icon = Icons.Filled.ArrowDownward,
-                    title = "Export Database",
-                    onClick = { exportLauncher.launch("coupon_database.db") }
-                )
-                HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-                SettingsItem(
-                    icon = Icons.Filled.Delete,
-                    title = "Reset Database",
-                    onClick = { showResetConfirmationDialog = true }
-                )
+
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                ElevatedCard(
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.elevatedCardElevation(2.dp)
+                ) {
+                    Column {
+                        SettingsItem(
+                            icon = Icons.Filled.ArrowUpward,
+                            title = "Import Database",
+                            onClick = { importLauncher.launch("*/*") }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        SettingsItem(
+                            icon = Icons.Filled.ArrowDownward,
+                            title = "Export Database",
+                            onClick = { exportLauncher.launch("coupon_database.db") }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        SettingsItem(
+                            icon = Icons.Filled.Delete,
+                            title = "Reset Database",
+                            onClick = { showResetConfirmationDialog = true }
+                        )
+                    }
+                }
             }
         }
     }

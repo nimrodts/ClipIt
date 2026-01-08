@@ -28,6 +28,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.nimroddayan.couponmanager.ui.viewmodel.SettingsViewModel
 
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
@@ -42,43 +45,51 @@ fun SettingsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .padding(16.dp)
     ) {
-        Spacer(modifier = Modifier.height(32.dp))
-        Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
-            SettingsItem(
-                icon = Icons.Filled.DarkMode,
-                title = "Dark Mode",
-                onClick = { onThemeChange(!isDarkTheme) }
-            ) {
-                Switch(
-                    checked = isDarkTheme,
-                    onCheckedChange = onThemeChange
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("General Settings", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 16.dp))
+        
+        ElevatedCard(
+            elevation = CardDefaults.elevatedCardElevation(2.dp),
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column {
+                SettingsItem(
+                    icon = Icons.Filled.DarkMode,
+                    title = "Dark Mode",
+                    onClick = { onThemeChange(!isDarkTheme) }
+                ) {
+                    Switch(
+                        checked = isDarkTheme,
+                        onCheckedChange = onThemeChange
+                    )
+                }
+                HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                SettingsItem(
+                    icon = Icons.Filled.Category,
+                    title = "Manage Categories",
+                    onClick = onManageCategories
+                )
+                HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                SettingsItem(
+                    icon = Icons.Filled.Archive,
+                    title = "Archived Coupons",
+                    onClick = onNavigateToArchive
+                )
+                HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                SettingsItem(
+                    icon = Icons.Filled.SmartToy,
+                    title = "AI Settings",
+                    onClick = onNavigateToAiSettings
+                )
+                HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                SettingsItem(
+                    icon = Icons.Filled.Dns,
+                    title = "Database",
+                    onClick = onNavigateToDatabaseSettings
                 )
             }
-            HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-            SettingsItem(
-                icon = Icons.Filled.Category,
-                title = "Manage Categories",
-                onClick = onManageCategories
-            )
-            HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-            SettingsItem(
-                icon = Icons.Filled.Archive,
-                title = "Archived Coupons",
-                onClick = onNavigateToArchive
-            )
-            HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-            SettingsItem(
-                icon = Icons.Filled.SmartToy,
-                title = "AI Settings",
-                onClick = onNavigateToAiSettings
-            )
-            HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-            SettingsItem(
-                icon = Icons.Filled.Dns,
-                title = "Database",
-                onClick = onNavigateToDatabaseSettings
-            )
         }
     }
 }

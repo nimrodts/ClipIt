@@ -25,6 +25,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.nimroddayan.couponmanager.data.model.Coupon
 import kotlinx.coroutines.delay
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.ButtonDefaults
 
 @Composable
 fun UseCouponDialog(
@@ -37,12 +50,21 @@ fun UseCouponDialog(
     val keyboardController = LocalSoftwareKeyboardController.current
 
     Dialog(onDismissRequest = onDismiss) {
-        Card {
+        ElevatedCard(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.elevatedCardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.elevatedCardElevation(6.dp)
+        ) {
             Column(
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Use Coupon", style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
-                Text("Current Balance: ₪${String.format("%.2f", coupon.currentValue)}")
+                Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = androidx.compose.material3.MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Use Coupon", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Current Balance: ₪${String.format("%.2f", coupon.currentValue)}", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(24.dp))
                 OutlinedTextField(
                     value = amountToUse,
                     onValueChange = {

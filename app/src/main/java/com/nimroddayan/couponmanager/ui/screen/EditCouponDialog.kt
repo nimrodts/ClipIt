@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.nimroddayan.couponmanager.data.model.Category
 import com.nimroddayan.couponmanager.data.model.Coupon
 import com.nimroddayan.couponmanager.ui.viewmodel.CategoryViewModel
 import com.nimroddayan.couponmanager.ui.viewmodel.CouponViewModel
@@ -39,10 +37,10 @@ import java.util.TimeZone
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditCouponDialog(
-    coupon: Coupon,
-    categoryViewModel: CategoryViewModel,
-    couponViewModel: CouponViewModel,
-    onDismiss: () -> Unit,
+        coupon: Coupon,
+        categoryViewModel: CategoryViewModel,
+        couponViewModel: CouponViewModel,
+        onDismiss: () -> Unit,
 ) {
     val categories by categoryViewModel.allCategories.collectAsState(initial = emptyList())
     var name by remember { mutableStateOf(coupon.name) }
@@ -51,132 +49,141 @@ fun EditCouponDialog(
     var expiration by remember { mutableStateOf<Long?>(coupon.expirationDate) }
     var redeemCode by remember { mutableStateOf(coupon.redeemCode) }
     var expanded by remember { mutableStateOf(false) }
-    var selectedCategory by remember(coupon, categories) { mutableStateOf(categories.find { it.id == coupon.categoryId }) }
+    var selectedCategory by
+            remember(coupon, categories) {
+                mutableStateOf(categories.find { it.id == coupon.categoryId })
+            }
     var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = coupon.expirationDate)
+    // DatePicker only supports years 1900-2100. Check if the date is within range.
+    val validExpirationDate =
+            remember(coupon.expirationDate) {
+                val calendar = java.util.Calendar.getInstance()
+                calendar.timeInMillis = coupon.expirationDate
+                val year = calendar.get(java.util.Calendar.YEAR)
+                if (year in 1900..2100) coupon.expirationDate else System.currentTimeMillis()
+            }
+    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = validExpirationDate)
 
     Dialog(onDismissRequest = onDismiss) {
         Card {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Coupon Name") },
-                    modifier = Modifier.fillMaxWidth()
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Coupon Name") },
+                        modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
-                    value = value,
-                    onValueChange = { value = it },
-                    label = { Text("Initial Value") },
-                    modifier = Modifier.fillMaxWidth()
+                        value = value,
+                        onValueChange = { value = it },
+                        label = { Text("Initial Value") },
+                        modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
-                    value = currentValue,
-                    onValueChange = { currentValue = it },
-                    label = { Text("Current Value") },
-                    modifier = Modifier.fillMaxWidth()
+                        value = currentValue,
+                        onValueChange = { currentValue = it },
+                        label = { Text("Current Value") },
+                        modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
-                    value = redeemCode ?: "",
-                    onValueChange = { redeemCode = it },
-                    label = { Text("Redeem Code") },
-                    modifier = Modifier.fillMaxWidth(),
+                        value = redeemCode ?: "",
+                        onValueChange = { redeemCode = it },
+                        label = { Text("Redeem Code") },
+                        modifier = Modifier.fillMaxWidth(),
                 )
                 Box {
                     OutlinedTextField(
-                        value = expiration?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it)) } ?: "",
-                        onValueChange = { },
-                        label = { Text("Expiration Date") },
-                        readOnly = true,
-                        modifier = Modifier.fillMaxWidth()
+                            value =
+                                    expiration?.let {
+                                        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                                                .format(Date(it))
+                                    }
+                                            ?: "",
+                            onValueChange = {},
+                            label = { Text("Expiration Date") },
+                            readOnly = true,
+                            modifier = Modifier.fillMaxWidth()
                     )
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clickable { showDatePicker = true }
-                    )
+                    Box(modifier = Modifier.matchParentSize().clickable { showDatePicker = true })
                 }
 
                 if (showDatePicker) {
                     DatePickerDialog(
-                        onDismissRequest = { showDatePicker = false },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                datePickerState.selectedDateMillis?.let { date ->
-                                    val timeZone = TimeZone.getDefault()
-                                    val offset = timeZone.getOffset(date)
-                                    expiration = date + offset
-                                }
-                                showDatePicker = false
-                            }) {
-                                Text("OK")
+                            onDismissRequest = { showDatePicker = false },
+                            confirmButton = {
+                                TextButton(
+                                        onClick = {
+                                            datePickerState.selectedDateMillis?.let { date ->
+                                                val timeZone = TimeZone.getDefault()
+                                                val offset = timeZone.getOffset(date)
+                                                expiration = date + offset
+                                            }
+                                            showDatePicker = false
+                                        }
+                                ) { Text("OK") }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
                             }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { showDatePicker = false }) {
-                                Text("Cancel")
-                            }
-                        }
                     ) {
                         DatePicker(
-                            state = datePickerState,
+                                state = datePickerState,
                         )
                     }
                 }
 
                 ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded },
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded },
                 ) {
                     OutlinedTextField(
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
-                        readOnly = true,
-                        value = selectedCategory?.name ?: "",
-                        onValueChange = { },
-                        label = { Text("Category") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            readOnly = true,
+                            value = selectedCategory?.name ?: "",
+                            onValueChange = {},
+                            label = { Text("Category") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                            },
                     )
                     ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
                     ) {
                         categories.forEach { category ->
                             DropdownMenuItem(
-                                text = { Text(category.name) },
-                                onClick = {
-                                    selectedCategory = category
-                                    expanded = false
-                                },
-                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                                    text = { Text(category.name) },
+                                    onClick = {
+                                        selectedCategory = category
+                                        expanded = false
+                                    },
+                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                             )
                         }
                     }
                 }
 
                 Button(
-                    onClick = {
-                        expiration?.let { exp ->
-                            selectedCategory?.let { category ->
-                                val updatedCoupon = coupon.copy(
-                                    name = name,
-                                    initialValue = value.toDouble(),
-                                    currentValue = currentValue.toDouble(),
-                                    expirationDate = exp,
-                                    categoryId = category.id,
-                                    redeemCode = redeemCode
-                                )
-                                couponViewModel.update(updatedCoupon)
+                        onClick = {
+                            expiration?.let { exp ->
+                                selectedCategory?.let { category ->
+                                    val updatedCoupon =
+                                            coupon.copy(
+                                                    name = name,
+                                                    initialValue = value.toDouble(),
+                                                    currentValue = currentValue.toDouble(),
+                                                    expirationDate = exp,
+                                                    categoryId = category.id,
+                                                    redeemCode = redeemCode
+                                            )
+                                    couponViewModel.update(updatedCoupon)
+                                }
                             }
-                        }
-                        onDismiss()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = selectedCategory != null && expiration != null
-                ) {
-                    Text("Save")
-                }
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = selectedCategory != null && expiration != null
+                ) { Text("Save") }
             }
         }
     }

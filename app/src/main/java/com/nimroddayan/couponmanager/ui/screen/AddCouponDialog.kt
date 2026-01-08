@@ -42,6 +42,13 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,12 +91,20 @@ fun AddCouponDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
-        Card {
+        ElevatedCard(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.elevatedCardElevation(6.dp)
+        ) {
             Box(contentAlignment = Alignment.Center) {
                 Column(
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Add Coupon", style = MaterialTheme.typography.titleLarge)
+                    Icon(Icons.Default.AddCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Add New Coupon", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     error?.let {
                         Text(it, color = MaterialTheme.colorScheme.error)

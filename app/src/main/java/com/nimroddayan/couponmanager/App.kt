@@ -120,6 +120,8 @@ fun App(app: CouponApplication) {
             composable(
                 Screen.CategoryManagement.route,
                 enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) },
+                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }) },
                 popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
             ) {
                 val categoryViewModel: CategoryViewModel = viewModel(factory = CategoryViewModelFactory(app.database))
@@ -131,6 +133,8 @@ fun App(app: CouponApplication) {
             composable(
                 Screen.ArchivedCoupons.route,
                 enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) },
+                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }) },
                 popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
             ) {
                 ArchivedCouponsScreen(
@@ -142,6 +146,8 @@ fun App(app: CouponApplication) {
             composable(
                 Screen.AiSettings.route,
                 enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) },
+                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }) },
                 popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
             ) {
                 val settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
@@ -154,6 +160,8 @@ fun App(app: CouponApplication) {
                 Screen.CouponHistory.route,
                 arguments = listOf(navArgument("couponId") { type = NavType.LongType }),
                 enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) },
+                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }) },
                 popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
             ) {
                 val couponId = it.arguments?.getLong("couponId") ?: -1
@@ -166,6 +174,8 @@ fun App(app: CouponApplication) {
             composable(
                 Screen.DatabaseSettings.route,
                 enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) },
+                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }) },
                 popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) }
             ) {
                 DatabaseSettingsScreen(

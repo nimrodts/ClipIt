@@ -31,9 +31,10 @@ import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -41,10 +42,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -75,11 +76,11 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    coupons: List<Coupon>,
-    categoriesViewModel: CategoryViewModel,
-    couponViewModel: CouponViewModel,
-    onAddCoupon: () -> Unit,
-    onNavigateToHistory: (Long) -> Unit,
+        coupons: List<Coupon>,
+        categoriesViewModel: CategoryViewModel,
+        couponViewModel: CouponViewModel,
+        onAddCoupon: () -> Unit,
+        onNavigateToHistory: (Long) -> Unit,
 ) {
     val categories by categoriesViewModel.allCategories.collectAsState(initial = emptyList())
     var showUseCouponDialog by remember { mutableStateOf<Coupon?>(null) }
@@ -92,11 +93,14 @@ fun HomeScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategories by remember { mutableStateOf(emptySet<Category>()) }
 
-    val filteredCoupons = coupons.filter { coupon ->
-        val searchMatch = coupon.name.contains(searchQuery, ignoreCase = true)
-        val categoryMatch = selectedCategories.isEmpty() || selectedCategories.any { it.id == coupon.categoryId }
-        searchMatch && categoryMatch
-    }
+    val filteredCoupons =
+            coupons.filter { coupon ->
+                val searchMatch = coupon.name.contains(searchQuery, ignoreCase = true)
+                val categoryMatch =
+                        selectedCategories.isEmpty() ||
+                                selectedCategories.any { it.id == coupon.categoryId }
+                searchMatch && categoryMatch
+            }
 
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
@@ -108,68 +112,79 @@ fun HomeScreen(
     }
 
     Scaffold(
-        modifier = Modifier.pointerInput(Unit) {
-            detectTapGestures(onTap = {
-                focusManager.clearFocus()
-            })
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onAddCoupon) {
-                Icon(Icons.Filled.Add, contentDescription = "Add Coupon")
+            modifier =
+                    Modifier.pointerInput(Unit) {
+                        detectTapGestures(onTap = { focusManager.clearFocus() })
+                    },
+            floatingActionButton = {
+                FloatingActionButton(
+                        onClick = onAddCoupon,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                ) { Icon(Icons.Filled.Add, contentDescription = "Add Coupon") }
             }
-        }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
-            TextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                label = { Text("Search Coupons") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
+            OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Search Coupons") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+                    colors =
+                            androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface
+                            ),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp)
             )
 
-            LazyRow(modifier = Modifier.padding(horizontal = 8.dp)) {
+            LazyRow(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 items(categories) { category ->
                     FilterChip(
-                        selected = selectedCategories.contains(category),
-                        onClick = {
-                            selectedCategories = if (selectedCategories.contains(category)) {
-                                selectedCategories - category
-                            } else {
-                                selectedCategories + category
-                            }
-                        },
-                        label = { Text(category.name) },
-                        modifier = Modifier.padding(horizontal = 4.dp)
+                            selected = selectedCategories.contains(category),
+                            onClick = {
+                                selectedCategories =
+                                        if (selectedCategories.contains(category)) {
+                                            selectedCategories - category
+                                        } else {
+                                            selectedCategories + category
+                                        }
+                            },
+                            label = { Text(category.name) }
                     )
                 }
             }
 
             if (filteredCoupons.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No coupons found. Try a different filter!")
                 }
             } else {
-                LazyColumn(state = listState) {
+                LazyColumn(
+                        state = listState,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     items(filteredCoupons) { coupon ->
                         val category = categories.find { it.id == coupon.categoryId }
                         CouponItem(
-                            coupon = coupon,
-                            category = category,
-                            onUseClick = { showUseCouponDialog = coupon },
-                            onEditClick = { showEditCouponDialog = coupon },
-                            onArchiveClick = { showArchiveConfirmationDialog = coupon },
-                            onDeleteClick = { showDeleteConfirmationDialog = coupon },
-                            onLongPress = { showRedeemCodeDialog = coupon.redeemCode },
-                            onHistoryClick = { onNavigateToHistory(coupon.id) },
-                            onViewMessageClick = { showOriginalMessageDialog = coupon.creationMessage }
+                                coupon = coupon,
+                                category = category,
+                                onUseClick = { showUseCouponDialog = coupon },
+                                onEditClick = { showEditCouponDialog = coupon },
+                                onArchiveClick = { showArchiveConfirmationDialog = coupon },
+                                onDeleteClick = { showDeleteConfirmationDialog = coupon },
+                                onLongPress = { showRedeemCodeDialog = coupon.redeemCode },
+                                onHistoryClick = { onNavigateToHistory(coupon.id) },
+                                onViewMessageClick = {
+                                    showOriginalMessageDialog = coupon.creationMessage
+                                }
                         )
                     }
                 }
@@ -179,75 +194,70 @@ fun HomeScreen(
 
     showUseCouponDialog?.let { coupon ->
         UseCouponDialog(
-            coupon = coupon,
-            onConfirm = { amount ->
-                couponViewModel.use(coupon, amount)
-                showUseCouponDialog = null
-            },
-            onDismiss = { showUseCouponDialog = null }
+                coupon = coupon,
+                onConfirm = { amount ->
+                    couponViewModel.use(coupon, amount)
+                    showUseCouponDialog = null
+                },
+                onDismiss = { showUseCouponDialog = null }
         )
     }
 
     showEditCouponDialog?.let { coupon ->
         EditCouponDialog(
-            coupon = coupon,
-            categoryViewModel = categoriesViewModel,
-            couponViewModel = couponViewModel,
-            onDismiss = { showEditCouponDialog = null }
+                coupon = coupon,
+                categoryViewModel = categoriesViewModel,
+                couponViewModel = couponViewModel,
+                onDismiss = { showEditCouponDialog = null }
         )
     }
 
     showArchiveConfirmationDialog?.let { coupon ->
         ConfirmationDialog(
-            onConfirm = {
-                couponViewModel.archive(coupon)
-                showArchiveConfirmationDialog = null
-            },
-            onDismiss = { showArchiveConfirmationDialog = null },
-            title = "Archive Coupon",
-            message = "Are you sure you want to archive this coupon?"
+                onConfirm = {
+                    couponViewModel.archive(coupon)
+                    showArchiveConfirmationDialog = null
+                },
+                onDismiss = { showArchiveConfirmationDialog = null },
+                title = "Archive Coupon",
+                message = "Are you sure you want to archive this coupon?"
         )
     }
 
     showDeleteConfirmationDialog?.let { coupon ->
         ConfirmationDialog(
-            onConfirm = {
-                couponViewModel.delete(coupon)
-                showDeleteConfirmationDialog = null
-            },
-            onDismiss = { showDeleteConfirmationDialog = null },
-            title = "Delete Coupon",
-            message = "Are you sure you want to delete this coupon? This action cannot be undone."
+                onConfirm = {
+                    couponViewModel.delete(coupon)
+                    showDeleteConfirmationDialog = null
+                },
+                onDismiss = { showDeleteConfirmationDialog = null },
+                title = "Delete Coupon",
+                message =
+                        "Are you sure you want to delete this coupon? This action cannot be undone."
         )
     }
 
     showRedeemCodeDialog?.let { redeemCode ->
-        RedeemCodeDialog(
-            redeemCode = redeemCode,
-            onDismiss = { showRedeemCodeDialog = null }
-        )
+        RedeemCodeDialog(redeemCode = redeemCode, onDismiss = { showRedeemCodeDialog = null })
     }
 
     showOriginalMessageDialog?.let { message ->
-        MessageDialog(
-            message = message,
-            onDismiss = { showOriginalMessageDialog = null }
-        )
+        MessageDialog(message = message, onDismiss = { showOriginalMessageDialog = null })
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CouponItem(
-    coupon: Coupon,
-    category: Category?,
-    onUseClick: () -> Unit,
-    onEditClick: () -> Unit,
-    onArchiveClick: () -> Unit,
-    onDeleteClick: () -> Unit,
-    onLongPress: () -> Unit,
-    onHistoryClick: () -> Unit,
-    onViewMessageClick: () -> Unit,
+        coupon: Coupon,
+        category: Category?,
+        onUseClick: () -> Unit,
+        onEditClick: () -> Unit,
+        onArchiveClick: () -> Unit,
+        onDeleteClick: () -> Unit,
+        onLongPress: () -> Unit,
+        onHistoryClick: () -> Unit,
+        onViewMessageClick: () -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -255,98 +265,163 @@ fun CouponItem(
     val categoryColor = category?.colorHex ?: "#808080"
     val categoryIcon = category?.iconName ?: "help"
 
-    Surface(
-        modifier = Modifier.combinedClickable(
-            onClick = { /* No action on single click */ },
-            onLongClick = onLongPress
-        )
+    ElevatedCard(
+            modifier =
+                    Modifier.fillMaxWidth()
+                            .combinedClickable(
+                                    onClick = { /* No action on single click */},
+                                    onLongClick = onLongPress
+                            ),
+            elevation = CardDefaults.elevatedCardElevation(2.dp),
+            colors =
+                    CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                    )
     ) {
         Column {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color(android.graphics.Color.parseColor(categoryColor)))
+                        modifier =
+                                Modifier.size(48.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                                Color(
+                                                        android.graphics.Color.parseColor(
+                                                                categoryColor
+                                                        )
+                                                )
+                                        )
                 ) {
                     Icon(
-                        imageVector = getIconByName(categoryIcon),
-                        contentDescription = categoryName,
-                        modifier = Modifier.align(Alignment.Center),
-                        tint = getContrastColor(categoryColor)
+                            imageVector = getIconByName(categoryIcon),
+                            contentDescription = categoryName,
+                            modifier = Modifier.align(Alignment.Center),
+                            tint = getContrastColor(categoryColor)
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = coupon.name, fontWeight = FontWeight.Bold)
-                    Text(text = categoryName, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.padding(top = 4.dp))
-                    val expirationText = "Expires: ${SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).format(Date(coupon.expirationDate))}"
-                    val expirationColor = if (coupon.expirationDate < System.currentTimeMillis()) MaterialTheme.colorScheme.error else Color.Unspecified
+                    Text(
+                            text = coupon.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                            text = categoryName,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                    )
+                    val expirationText =
+                            "Expires: ${SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).format(Date(coupon.expirationDate))}"
+                    val expirationColor =
+                            if (coupon.expirationDate < System.currentTimeMillis())
+                                    MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurfaceVariant
                     Text(text = expirationText, color = expirationColor, fontSize = 12.sp)
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "₪${String.format("%.2f", coupon.currentValue)} / ₪${String.format("%.2f", coupon.initialValue)}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
+                            text = "₪${String.format("%.2f", coupon.currentValue)}",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                            text = "/ ₪${String.format("%.2f", coupon.initialValue)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row {
-                        IconButton(onClick = onUseClick) {
-                            Icon(Icons.Default.ShoppingCart, contentDescription = "Use Coupon")
+                        IconButton(onClick = onUseClick, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                    Icons.Default.ShoppingCart,
+                                    contentDescription = "Use Coupon",
+                                    modifier = Modifier.size(20.dp)
+                            )
                         }
                         Box {
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                            IconButton(
+                                    onClick = { showMenu = true },
+                                    modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                        Icons.Default.MoreVert,
+                                        contentDescription = "More options",
+                                        modifier = Modifier.size(20.dp)
+                                )
                             }
                             DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
+                                    expanded = showMenu,
+                                    onDismissRequest = { showMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Edit") },
-                                    onClick = {
-                                        onEditClick()
-                                        showMenu = false
-                                    },
-                                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = "Edit") }
+                                        text = { Text("Edit") },
+                                        onClick = {
+                                            onEditClick()
+                                            showMenu = false
+                                        },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Edit, contentDescription = "Edit")
+                                        }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Archive") },
-                                    onClick = {
-                                        onArchiveClick()
-                                        showMenu = false
-                                    },
-                                    leadingIcon = { Icon(Icons.Default.Archive, contentDescription = "Archive") }
+                                        text = { Text("Archive") },
+                                        onClick = {
+                                            onArchiveClick()
+                                            showMenu = false
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                    Icons.Default.Archive,
+                                                    contentDescription = "Archive"
+                                            )
+                                        }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("History") },
-                                    onClick = {
-                                        onHistoryClick()
-                                        showMenu = false
-                                    },
-                                    leadingIcon = { Icon(Icons.Default.History, contentDescription = "History") }
+                                        text = { Text("History") },
+                                        onClick = {
+                                            onHistoryClick()
+                                            showMenu = false
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                    Icons.Default.History,
+                                                    contentDescription = "History"
+                                            )
+                                        }
                                 )
                                 coupon.creationMessage?.let {
                                     DropdownMenuItem(
-                                        text = { Text("View Original Message") },
-                                        onClick = {
-                                            onViewMessageClick()
-                                            showMenu = false
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Message, contentDescription = "View Original Message") }
+                                            text = { Text("View Original Message") },
+                                            onClick = {
+                                                onViewMessageClick()
+                                                showMenu = false
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                        Icons.Default.Message,
+                                                        contentDescription = "View Original Message"
+                                                )
+                                            }
                                     )
                                 }
                                 DropdownMenuItem(
-                                    text = { Text("Delete") },
-                                    onClick = {
-                                        onDeleteClick()
-                                        showMenu = false
-                                    },
-                                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = "Delete") }
+                                        text = { Text("Delete") },
+                                        onClick = {
+                                            onDeleteClick()
+                                            showMenu = false
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                    Icons.Default.Delete,
+                                                    contentDescription = "Delete"
+                                            )
+                                        }
                                 )
                             }
                         }
@@ -354,10 +429,13 @@ fun CouponItem(
                 }
             }
             LinearProgressIndicator(
-                progress = { (coupon.currentValue / coupon.initialValue).toFloat().coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth()
+                    progress = {
+                        (coupon.currentValue / coupon.initialValue).toFloat().coerceIn(0f, 1f)
+                    },
+                    modifier = Modifier.fillMaxWidth().height(4.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         }
-        HorizontalDivider()
     }
 }
