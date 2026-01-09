@@ -101,6 +101,7 @@ dependencies {
     // Google Drive
     implementation("com.google.http-client:google-http-client-android:1.43.3")
     implementation(libs.bundles.google.drive)
+    implementation(libs.zxing.core)
 
     // Test
     testImplementation(libs.junit)
