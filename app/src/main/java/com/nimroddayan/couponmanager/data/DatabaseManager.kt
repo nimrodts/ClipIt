@@ -3,7 +3,6 @@ package com.nimroddayan.couponmanager.data
 import android.content.Context
 import android.net.Uri
 import com.nimroddayan.couponmanager.data.db.AppDatabase
-import com.nimroddayan.couponmanager.data.model.Category
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import kotlinx.coroutines.CoroutineScope
@@ -60,18 +59,7 @@ class DatabaseManager(private val context: Context) {
 
     fun resetDatabase() {
         val db = AppDatabase.getDatabase(context)
-        CoroutineScope(Dispatchers.IO).launch {
-            db.clearAllTables()
-            db.categoryDao()
-                    .insert(
-                            Category(
-                                    id = 1,
-                                    name = "General",
-                                    colorHex = "#808080",
-                                    iconName = "help"
-                            )
-                    )
-        }
+        CoroutineScope(Dispatchers.IO).launch { db.clearAllTables() }
     }
 
     // Removed standalone checkpoint as it is now integrated into createBackup
