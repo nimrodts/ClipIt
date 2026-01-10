@@ -1,7 +1,9 @@
 package com.nimroddayan.couponmanager.ui.screen
 
+import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
+import android.view.WindowManager
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -25,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +41,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +64,25 @@ fun RedeemCodeDialog(
         onDismiss: () -> Unit,
 ) {
         val clipboardManager = LocalClipboardManager.current
+        val context = LocalContext.current
+        DisposableEffect(Unit) {
+                val activity = context as? Activity
+                val originalBrightness = activity?.window?.attributes?.screenBrightness
+                activity?.let {
+                        val layoutParams = it.window.attributes
+                        layoutParams.screenBrightness =
+                                WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL
+                        it.window.attributes = layoutParams
+                }
+
+                onDispose {
+                        activity?.let {
+                                val layoutParams = it.window.attributes
+                                layoutParams.screenBrightness = originalBrightness ?: -1f
+                                it.window.attributes = layoutParams
+                        }
+                }
+        }
         val totalPages = 10_000
         val startIndex = totalPages / 2
         val initialPage = if (startIndex % 2 == 0) startIndex else startIndex + 1
@@ -69,10 +92,11 @@ fun RedeemCodeDialog(
         var barcodeBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
         LaunchedEffect(redeemCode) {
+                val sanitizedCode = redeemCode.filter { it.isLetterOrDigit() }
                 withContext(Dispatchers.Default) {
-                        qrBitmap = generateBarcode(redeemCode, BarcodeFormat.QR_CODE, 200, 200)
+                        qrBitmap = generateBarcode(sanitizedCode, BarcodeFormat.QR_CODE, 200, 200)
                         barcodeBitmap =
-                                generateBarcode(redeemCode, BarcodeFormat.CODE_128, 300, 100)
+                                generateBarcode(sanitizedCode, BarcodeFormat.CODE_128, 300, 100)
                 }
         }
 

@@ -272,7 +272,13 @@ fun HomeScreen(
             } else {
                 LazyColumn(
                         state = listState,
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                        contentPadding =
+                                androidx.compose.foundation.layout.PaddingValues(
+                                        top = 16.dp,
+                                        start = 16.dp,
+                                        end = 16.dp,
+                                        bottom = 88.dp
+                                ),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(filteredCoupons) { coupon ->

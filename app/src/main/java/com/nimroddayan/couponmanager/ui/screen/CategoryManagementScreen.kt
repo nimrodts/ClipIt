@@ -78,10 +78,14 @@ fun CategoryManagementScreen(viewModel: CategoryViewModel, onNavigateUp: () -> U
         if (categoryToRename != null) {
                 EditCategoryDialog(
                         category = categoryToRename!!,
-                        onConfirm = { newName, newColor ->
+                        onConfirm = { newName, newColor, newIcon ->
                                 categoryToRename?.let {
                                         viewModel.update(
-                                                it.copy(name = newName, colorHex = newColor)
+                                                it.copy(
+                                                        name = newName,
+                                                        colorHex = newColor,
+                                                        iconName = newIcon
+                                                )
                                         )
                                 }
                                 categoryToRename = null
