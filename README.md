@@ -1,71 +1,72 @@
-# CouponManager App Features
+# CouponManager
 
-This document provides an overview of the features available in the CouponManager app.
+CouponManager is a smart Android application designed to organize, track, and redeem detailed digital coupons and gift cards. Built with privacy and ease of use in use, it offers a complete solution for managing coupon expiry, remaining balances, and redemption history.
 
-## Coupon Management
+## Key Features
 
-- **Create, Edit, and Archive Coupons:** Users can easily add new coupons, modify existing ones, or archive them when they are no longer in use.
-- **Track Coupon Balance:** The app tracks both the initial and current value of each coupon, allowing users to see how much has been used.
-- **Set Expiration Dates:** Users can set an expiration date for each coupon to ensure they are used on time.
-- **Categorize Coupons:** Coupons can be assigned to user-defined categories, making it easy to organize and find them.
-- **Redeem Codes:** Users can add a redeem code to each coupon, which is displayed in the coupon's details.
+### 🏷️ Coupon Management
+*   **Detailed Tracking**: Store coupons with names, expiration dates, initial values, and current balances.
+*   **Organization**: Organize coupons into custom categories with personalized names, colors, and icons.
+*   **Smart Search & Filter**: Easily find coupons by search query, category, or sorting by date, name, or value.
+*   **Archiving**: Archive used or expired coupons to keep your main dashboard clean without losing data.
 
-## Category Management
+### 📱 Smart Redemption
+*   **Instant Barcodes**: Automatically generates QR Codes, Code-128, and PDF-417 barcodes from redeem codes for easy scanning at checkout.
+*   **Auto-Brightness**: Automatically maximizes screen brightness when displaying a redeem code to ensure successful scanning, restoring it afterwards.
+*   **Partial Redemption**: Track spending by redeeming specific amounts from a coupon's total value.
+*   **One-Time Use**: Support for single-use coupons that are automatically archived after redemption.
 
-- **Create and Manage Categories:** Users can create custom categories to organize their coupons. This allows for a more structured and personalized experience.
+### 🧠 AI Integration (Gemini)
+*   **Smart Parsing**: Powered by Google's Gemini 1.5 Pro/Flash, the app can intelligently parse coupon details (name, code, value, date) from unstructured text or messages.
+*   **Customizable**: Configure your own Gemini API key and select preferred models and temperature settings directly in the app.
 
-## History & Restore Feature
+### ☁️ Cloud & Local Backup
+*   **Google Drive Sync**: Seamlessly backup your entire database to Google Drive and restore it on any device.
+*   **Manual Export**: Export your database as a portable file for manual backups.
+*   **Privacy Focused**: Your data belongs to you. No external servers are used other than your own Google Drive.
 
-### 1. Overview
-The **History & Restore** module provides users with a complete, immutable timeline of every action performed on a coupon. It serves as an audit trail for accuracy and a safety net against mistakes, allowing users to revert a coupon to any previous state without data loss.
+### 📜 History & Time Travel
+The app maintains an immutable timeline of every action performed on a coupon, serving as an audit trail and safety net.
+*   **Tracked Operations**:
+    *   **Creation**: Initial entry.
+    *   **Edits**: Changes to name, date, category, etc.
+    *   **Usage**: Deductions from balance.
+    *   **Status**: Archiving/Unarchiving.
+*   **Restore Capability**: Revert a coupon to *any* previous state in its history. This is a non-destructive action that adds a "Restored" entry to the timeline, preserving the history chain.
 
-### 2. Automatic Operation Tracking
-The system automatically records an entry in the history log whenever a significant change occurs to a coupon. Users are not required to manually save these versions.
+## Tech Stack
 
-**Tracked Operations:**
-- **Creation:** Recorded when a new coupon is first added to the system.
-- **Edits:** Recorded when details such as Name, Expiration Date, Category, or Redeem Code are modified.
-- **Balance Changes:** Recorded when a balance is manually updated or utilized.
-- **Status Changes:** Recorded when a coupon is Archived or Unarchived.
+*   **Language**: Kotlin
+*   **UI Framework**: Jetpack Compose (Material 3)
+*   **Database**: Room (SQLite)
+*   **Architecture**: MVVM with Unidirectional Data Flow
+*   **AI**: Google Gemini API (`google-generativeai`)
+*   **Cloud**: Google Drive API for Android
+*   **Barcode Generation**: ZXing Library
+*   **Concurrency**: Kotlin Coroutines & Flow
 
-### 3. Viewing History
-Users can access a dedicated **History** section within the details view of any specific coupon.
+## Setup & usage
 
-#### Display Logic
-- **Sort Order:** The list is displayed in reverse chronological order (newest operations at the top).
-- **Entry Details:** Each history row contains:
-  - **Action Type:** A clear label indicating the event (e.g., "Balance Updated", "Coupon Edited").
-  - **Change Summary:** A descriptive text detailing specific changes (e.g., "Balance changed from $50 to $40").
-  - **Timestamp:** The date and time the action occurred.
-  - **Redeem Code:** The coupon redeem code
-- **Actionability:** Each past entry includes a **"Restore"** option, allowing the user to revert the coupon to the state it held *before* that specific action occurred.
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/Start-05/CouponManager.git
+    ```
+2.  **Open in Android Studio**:
+    Open the project in the latest version of Android Studio Koala or later.
+3.  **Build & Run**:
+    Connect an Android device or start an emulator and run the `app` configuration.
 
-### 4. The "Restore" Functionality
-The Restore feature allows users to "time travel" back to a previous version of the coupon.
+### Configuring AI Features
+To use the AI parsing features, you need a Google Gemini API Key:
+1.  Get an API key from [Google AI Studio](https://aistudio.google.com/).
+2.  In the app, go to **Settings** -> **AI Settings**.
+3.  Enter your API Key and tap **Save Key**.
 
-#### Behavior Rules
-1.  **Non-Destructive Reversion:** When a user restores an old version, the app **does not** delete the history between the past date and the present. Instead, it creates a **new** history entry at the top of the list labeled "Restored."
+### Configuring Backups
+1.  Go to **Settings** -> **Database Settings**.
+2.  Tap "Connect Google Drive" and assign your google account.
+3.  You can now upload and restore backups.
 
-2.  **Unlimited Restoration:** Users can restore from *any* point in the history list, not just the most recent action.
+## License
 
-3.  **Forward-Only Timeline:**
-    - *Example:* A user changes a name on Monday, then changes the balance on Tuesday.
-    - On Wednesday, they choose to restore the Monday version.
-    - **Result:** The coupon returns to Monday's state. The history list preserves the record: Monday -> Tuesday -> Wednesday -> **Thursday (Restored to Monday).**
-
-4.  **Safety Net:** Since a "Restore" action is itself recorded as a new history entry, users can effectively "undo a restore" by restoring the version immediately prior to the restore action.
-
-### 5. Visual Feedback
-- **Confirmation:** Upon a successful restore, the app displays a temporary notification (e.g., Snackbar) confirming: *"Coupon restored to version from [Date]."*
-- **Immediate Reflection:** The coupon details screen immediately updates to reflect the restored values (Name, Balance, Category, etc.) without requiring a page refresh.
-
-### 6. Edge Case Handling
-- **Restoring to "Uncategorized":** If a user restores a version that belonged to a Category that has since been deleted, the system will default the coupon to "No Category" (or a generic bucket) rather than failing the operation.
-
-### 7. Archived Coupon
-After a coupon is archived, the history operation will be hidden and won't be shown in the history page.
-There will be an option to see the history belonging to a specific coupon through the archived page.
-
-## Data Persistence
-
-- **Local Storage:** All coupon and category data is stored locally on the device using a Room database, ensuring that the information is available even when offline.
+This project is open source.
