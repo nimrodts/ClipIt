@@ -167,4 +167,124 @@ class CouponDaoTest {
         val allCoupons = couponDao.getAll().first()
         assertTrue(allCoupons.isEmpty())
     }
+
+    // ========== Edge Cases and Error Handling ==========
+
+    @Test
+    fun getCouponById_returnsNullForNonexistentId() = runTest {
+        val result = couponDao.getCouponById(999999L)
+        assertNull(result)
+    }
+
+    @Test
+    fun getCouponByRedeemCode_returnsNullForNonexistentCode() = runTest {
+        couponDao.insertAll(createTestCoupon(redeemCode = "EXISTING-CODE"))
+
+        val result = couponDao.getCouponByRedeemCode("NONEXISTENT-CODE")
+        assertNull(result)
+    }
+
+    @Test
+    fun insertCouponWithZeroValue() = runTest {
+        val coupon = createTestCoupon(currentValue = 0.0, initialValue = 0.0)
+        val ids = couponDao.insertAll(coupon)
+
+        val retrieved = couponDao.getCouponById(ids.first())
+        assertEquals(0.0, retrieved?.currentValue ?: -1.0, 0.01)
+    }
+
+    @Test
+    fun insertCouponWithNegativeValue() = runTest {
+        // While logically invalid, test that DB handles it
+        val coupon = createTestCoupon(currentValue = -50.0, initialValue = 100.0)
+        val ids = couponDao.insertAll(coupon)
+
+        val retrieved = couponDao.getCouponById(ids.first())
+        assertEquals(-50.0, retrieved?.currentValue ?: 0.0, 0.01)
+    }
+
+    @Test
+    fun insertCouponWithVeryLargeValue() = runTest {
+        val largeValue = 999999999.99
+        val coupon = createTestCoupon(currentValue = largeValue, initialValue = largeValue)
+        val ids = couponDao.insertAll(coupon)
+
+        val retrieved = couponDao.getCouponById(ids.first())
+        assertEquals(largeValue, retrieved?.currentValue ?: 0.0, 0.01)
+    }
+
+    @Test
+    fun insertCouponWithEmptyName() = runTest {
+        val coupon = createTestCoupon(name = "")
+        val ids = couponDao.insertAll(coupon)
+
+        val retrieved = couponDao.getCouponById(ids.first())
+        assertEquals("", retrieved?.name)
+    }
+
+    @Test
+    fun insertCouponWithVeryLongName() = runTest {
+        val longName = "A".repeat(1000)
+        val coupon = createTestCoupon(name = longName)
+        val ids = couponDao.insertAll(coupon)
+
+        val retrieved = couponDao.getCouponById(ids.first())
+        assertEquals(longName, retrieved?.name)
+    }
+
+    @Test
+    fun insertCouponWithSpecialCharactersInName() = runTest {
+        val specialName = "קופון 🎁 50% Off! @#\$%"
+        val coupon = createTestCoupon(name = specialName)
+        val ids = couponDao.insertAll(coupon)
+
+        val retrieved = couponDao.getCouponById(ids.first())
+        assertEquals(specialName, retrieved?.name)
+    }
+
+    @Test
+    fun updateNonexistentCoupon_doesNotThrow() = runTest {
+        val fakeCoupon =
+                Coupon(
+                        id = 999999L,
+                        name = "Fake",
+                        currentValue = 100.0,
+                        initialValue = 100.0,
+                        expirationDate = System.currentTimeMillis(),
+                        categoryId = null
+                )
+
+        // Should not throw, just update 0 rows
+        couponDao.update(fakeCoupon)
+
+        // Verify DB is still in good state
+        val all = couponDao.getAll().first()
+        assertTrue(all.isEmpty())
+    }
+
+    @Test
+    fun deleteNonexistentCoupon_doesNotThrow() = runTest {
+        val fakeCoupon =
+                Coupon(
+                        id = 999999L,
+                        name = "Fake",
+                        currentValue = 100.0,
+                        initialValue = 100.0,
+                        expirationDate = System.currentTimeMillis(),
+                        categoryId = null
+                )
+
+        // Should not throw, just delete 0 rows
+        couponDao.delete(fakeCoupon)
+    }
+
+    @Test
+    fun multipleCouponsWithSameNameAllowed() = runTest {
+        couponDao.insertAll(createTestCoupon(name = "Same Name"))
+        couponDao.insertAll(createTestCoupon(name = "Same Name"))
+        couponDao.insertAll(createTestCoupon(name = "Same Name"))
+
+        val coupons = couponDao.getAll().first()
+        assertEquals(3, coupons.size)
+    }
 }
