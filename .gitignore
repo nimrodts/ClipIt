@@ -76,3 +76,6 @@ Thumbs.db
 
 .agent/
 AgentUtils/
+
+
+.kotlin/
