@@ -219,4 +219,77 @@ class CouponRepositoryTest {
         assertTrue(allCoupons.isEmpty())
         assertTrue(pendingCoupons.isEmpty())
     }
+
+    // ========== Undo Tests ==========
+
+    @Test
+    fun undo_restoresBalanceForCouponUsed() = runTest {
+        val coupon = createTestCoupon(currentValue = 100.0)
+        repository.insert(coupon)
+        val insertedCoupon = couponDao.getAll().first().first()
+
+        repository.use(insertedCoupon, 30.0)
+
+        // Find the "Coupon Used" history entry
+        val history = couponHistoryDao.getHistoryForCoupon(insertedCoupon.id).first()
+        val useEntry = history.find { it.action == "Coupon Used" }!!
+
+        repository.undo(useEntry)
+
+        val restoredCoupon = couponDao.getCouponById(insertedCoupon.id)
+        assertEquals(100.0, restoredCoupon?.currentValue ?: 0.0, 0.01)
+    }
+
+    @Test
+    fun undo_deletesHistoryEntry() = runTest {
+        val coupon = createTestCoupon(currentValue = 100.0)
+        repository.insert(coupon)
+        val insertedCoupon = couponDao.getAll().first().first()
+        repository.use(insertedCoupon, 20.0)
+
+        val historyBefore = couponHistoryDao.getHistoryForCoupon(insertedCoupon.id).first()
+        val useEntry = historyBefore.find { it.action == "Coupon Used" }!!
+
+        repository.undo(useEntry)
+
+        val historyAfter = couponHistoryDao.getHistoryForCoupon(insertedCoupon.id).first()
+        val remainingUseEntries = historyAfter.filter { it.action == "Coupon Used" }
+        assertTrue(remainingUseEntries.isEmpty())
+    }
+
+    // ========== Update with Change Summary Tests ==========
+
+    @Test
+    fun update_createsHistoryWithChangeSummary() = runTest {
+        val coupon = createTestCoupon(name = "Original", currentValue = 100.0)
+        repository.insert(coupon)
+        val insertedCoupon = couponDao.getAll().first().first()
+
+        val updatedCoupon = insertedCoupon.copy(name = "Updated Name", currentValue = 80.0)
+        repository.update(updatedCoupon)
+
+        val history = couponHistoryDao.getHistoryForCoupon(insertedCoupon.id).first()
+        val editEntry = history.find { it.action == "Coupon Edited" }
+
+        assertNotNull(editEntry)
+        assertTrue(editEntry?.changeSummary?.contains("Name changed") ?: false)
+        assertTrue(editEntry?.changeSummary?.contains("Balance changed") ?: false)
+    }
+
+    @Test
+    fun update_createsUseHistoryWhenValueReduced() = runTest {
+        val coupon = createTestCoupon(currentValue = 100.0)
+        repository.insert(coupon)
+        val insertedCoupon = couponDao.getAll().first().first()
+
+        // Update with reduced value (simulating manual balance reduction)
+        val updatedCoupon = insertedCoupon.copy(currentValue = 60.0)
+        repository.update(updatedCoupon)
+
+        val history = couponHistoryDao.getHistoryForCoupon(insertedCoupon.id).first()
+        val useEntry = history.find { it.action == "Coupon Used" }
+
+        assertNotNull(useEntry)
+        assertEquals("40.0", useEntry?.changeSummary) // 100 - 60 = 40
+    }
 }
