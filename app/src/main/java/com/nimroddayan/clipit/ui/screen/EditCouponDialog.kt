@@ -1,4 +1,4 @@
-﻿package com.nimroddayan.clipit.ui.screen
+package com.nimroddayan.clipit.ui.screen
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -175,9 +175,15 @@ fun EditCouponDialog(
                                                 ) {
                                                         redemptionUrl = newValue
                                                         redeemCode = null
-                                                } else {
-                                                        redeemCode = newValue.ifBlank { null }
+                                                } else if (newValue.isNotBlank()) {
+                                                        // User entered a non-URL code - update redeemCode
+                                                        // and clear URL since we're replacing it with a code
+                                                        redeemCode = newValue
                                                         redemptionUrl = null
+                                                } else {
+                                                        // User cleared the field - don't clear URL automatically
+                                                        // Let the user decide by using the toggle switch
+                                                        redeemCode = null
                                                 }
                                         },
                                         label = {

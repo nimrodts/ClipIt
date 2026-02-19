@@ -1,4 +1,4 @@
-﻿package com.nimroddayan.clipit.ui.screen
+package com.nimroddayan.clipit.ui.screen
 
 import android.app.Activity
 import android.graphics.Bitmap
@@ -68,9 +68,16 @@ fun RedeemCodeDialog(
 ) {
         val redeemCode = coupon.redeemCode
         val redemptionUrl = coupon.redemptionUrl
-        val displayCode =
-                if (!redeemCode.isNullOrBlank()) redeemCode
-                else if (!redemptionUrl.isNullOrBlank()) redemptionUrl else ""
+        
+        // Display priority: 1) redeemCode if available, 2) redemptionUrl if available, 3) empty
+        val displayCode = when {
+            !redeemCode.isNullOrBlank() -> redeemCode
+            !redemptionUrl.isNullOrBlank() -> redemptionUrl
+            else -> ""
+        }
+        
+        // Check if we have a URL to display (regardless of whether we have a code)
+        val hasUrl = !redemptionUrl.isNullOrBlank()
 
         val clipboardManager = LocalClipboardManager.current
         val context = LocalContext.current
@@ -144,7 +151,7 @@ fun RedeemCodeDialog(
                                 verticalArrangement = Arrangement.Center,
                         ) {
                                 Text(
-                                        text = "Redeem Code",
+                                        text = if (hasUrl && redeemCode.isNullOrBlank()) "Redemption Link" else "Redeem Code",
                                         style = MaterialTheme.typography.headlineSmall,
                                         color = MaterialTheme.colorScheme.onSurface
                                 )
@@ -256,14 +263,14 @@ fun RedeemCodeDialog(
                                 Spacer(modifier = Modifier.height(8.dp))
 
                                 Text(
-                                        text = "Tap code to copy",
+                                        text = if (hasUrl && redeemCode.isNullOrBlank()) "Tap link to open in browser" else "Tap code to copy",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
                                 Spacer(modifier = Modifier.height(24.dp))
 
-                                if (!redemptionUrl.isNullOrBlank()) {
+                                if (hasUrl) {
                                         val uriHandler = LocalUriHandler.current
                                         Button(
                                                 onClick = { uriHandler.openUri(redemptionUrl) },
