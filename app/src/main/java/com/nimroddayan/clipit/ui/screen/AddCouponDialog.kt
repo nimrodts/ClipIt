@@ -1,4 +1,4 @@
-﻿package com.nimroddayan.clipit.ui.screen
+package com.nimroddayan.clipit.ui.screen
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -346,13 +346,32 @@ fun AddCouponDialog(
                                     val categoryId = selectedCategory?.id
                                     val initialValue =
                                             if (isOneTime) 1.0 else value.toDoubleOrNull() ?: 0.0
+                                    val codeValue = redeemCode
+                                    val urlValue = redemptionUrl
+                                    val finalRedeemCode: String?
+                                    val finalRedemptionUrl: String?
+                                    if (isUrlMode) {
+                                        finalRedeemCode = null
+                                        finalRedemptionUrl = urlValue?.takeIf { it.isNotBlank() }
+                                    } else {
+                                        val isCodeUrl =
+                                                !codeValue.isNullOrBlank() &&
+                                                        (codeValue.startsWith("http://") ||
+                                                                codeValue.startsWith("https://"))
+                                        finalRedeemCode =
+                                                if (isCodeUrl) null
+                                                else codeValue?.takeIf { it.isNotBlank() }
+                                        finalRedemptionUrl =
+                                                if (isCodeUrl) codeValue
+                                                else urlValue?.takeIf { it.isNotBlank() }
+                                    }
                                     onAddCoupon(
                                             name,
                                             initialValue,
                                             exp,
                                             categoryId,
-                                            redeemCode,
-                                            redemptionUrl,
+                                            finalRedeemCode,
+                                            finalRedemptionUrl,
                                             creationMessage,
                                             isOneTime
                                     ) { onDismiss() }

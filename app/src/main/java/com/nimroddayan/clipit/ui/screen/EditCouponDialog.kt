@@ -169,21 +169,14 @@ fun EditCouponDialog(
                                 OutlinedTextField(
                                         value = displayRedemptionValue,
                                         onValueChange = { newValue ->
-                                                // Determine if the new value is a URL or a code
                                                 if (newValue.startsWith("http://") ||
                                                                 newValue.startsWith("https://")
                                                 ) {
                                                         redemptionUrl = newValue
                                                         redeemCode = null
-                                                } else if (newValue.isNotBlank()) {
-                                                        // User entered a non-URL code - update redeemCode
-                                                        // and clear URL since we're replacing it with a code
-                                                        redeemCode = newValue
-                                                        redemptionUrl = null
                                                 } else {
-                                                        // User cleared the field - don't clear URL automatically
-                                                        // Let the user decide by using the toggle switch
-                                                        redeemCode = null
+                                                        redeemCode = newValue.ifBlank { null }
+                                                        redemptionUrl = null
                                                 }
                                         },
                                         label = {
