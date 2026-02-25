@@ -131,12 +131,24 @@ class GeminiCouponExtractor(
             val initialValue = if (rawInitialValue.isNaN()) null else rawInitialValue
 
             return ParsedCoupon(
-                    storeName = jsonObject.optString("storeName"),
-                    redeemCode = jsonObject.optString("redeemCode"),
+                    storeName =
+                            jsonObject.optString("storeName").takeIf {
+                                it.isNotBlank() && it != "null"
+                            },
+                    redeemCode =
+                            jsonObject.optString("redeemCode").takeIf {
+                                it.isNotBlank() && it != "null"
+                            },
                     initialValue = initialValue,
                     expirationDate = expirationDate,
-                    description = jsonObject.optString("description"),
-                    redemptionUrl = jsonObject.optString("redemptionUrl")
+                    description =
+                            jsonObject.optString("description").takeIf {
+                                it.isNotBlank() && it != "null"
+                            },
+                    redemptionUrl =
+                            jsonObject.optString("redemptionUrl").takeIf {
+                                it.isNotBlank() && it != "null"
+                            }
             )
         } catch (e: com.google.ai.client.generativeai.type.QuotaExceededException) {
             android.util.Log.w("GeminiExtractor", "Quota exceeded. Falling back to regex.")

@@ -1,4 +1,4 @@
-﻿package com.nimroddayan.clipit.ui.screen
+package com.nimroddayan.clipit.ui.screen
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -169,7 +169,6 @@ fun EditCouponDialog(
                                 OutlinedTextField(
                                         value = displayRedemptionValue,
                                         onValueChange = { newValue ->
-                                                // Determine if the new value is a URL or a code
                                                 if (newValue.startsWith("http://") ||
                                                                 newValue.startsWith("https://")
                                                 ) {

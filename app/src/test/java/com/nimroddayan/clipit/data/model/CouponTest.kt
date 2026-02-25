@@ -148,4 +148,38 @@ class CouponTest {
 
         assertTrue(coupon.isPending)
     }
+
+    @Test
+    fun `coupon with only redemptionUrl is set correctly`() {
+        val coupon =
+                Coupon(
+                        name = "Online Coupon",
+                        currentValue = 25.0,
+                        initialValue = 25.0,
+                        expirationDate = 1700000000000L,
+                        categoryId = null,
+                        redeemCode = null,
+                        redemptionUrl = "https://example.com/redeem/abc123"
+                )
+
+        assertNull(coupon.redeemCode)
+        assertEquals("https://example.com/redeem/abc123", coupon.redemptionUrl)
+    }
+
+    @Test
+    fun `coupon with both redeemCode and redemptionUrl prioritizes code`() {
+        val coupon =
+                Coupon(
+                        name = "Hybrid Coupon",
+                        currentValue = 50.0,
+                        initialValue = 50.0,
+                        expirationDate = 1700000000000L,
+                        categoryId = null,
+                        redeemCode = "CODE-123",
+                        redemptionUrl = "https://example.com/redeem"
+                )
+
+        assertEquals("CODE-123", coupon.redeemCode)
+        assertEquals("https://example.com/redeem", coupon.redemptionUrl)
+    }
 }
