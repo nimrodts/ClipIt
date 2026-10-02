@@ -6,15 +6,54 @@ import com.nimroddayan.clipit.data.UserPreferencesRepository
 import com.nimroddayan.clipit.data.gemini.DetectionMode
 import com.nimroddayan.clipit.data.gemini.GeminiApiKeyRepository
 import com.nimroddayan.clipit.data.gemini.GeminiModel
+import com.nimroddayan.clipit.data.gemini.GeminiRestClient
+import com.nimroddayan.clipit.data.gemini.ModelOption
+import com.nimroddayan.clipit.data.gemini.ModelOptions
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(
         private val geminiApiKeyRepository: GeminiApiKeyRepository,
-        private val userPreferencesRepository: UserPreferencesRepository
+        private val userPreferencesRepository: UserPreferencesRepository,
+        private val geminiRestClient: GeminiRestClient
 ) : ViewModel() {
+
+        private val _modelListState = MutableStateFlow(ModelListState())
+        val modelListState: StateFlow<ModelListState> = _modelListState.asStateFlow()
+
+        /** Loads the models the saved key can use; falls back to the built-in list on any failure. */
+        fun refreshModels() {
+                viewModelScope.launch {
+                        _modelListState.update { it.copy(isLoading = true, error = null) }
+                        val settings = geminiApiKeyRepository.currentSettings()
+                        var error: String? = null
+                        val fetched =
+                                if (settings.apiKey.isBlank()) {
+                                        null
+                                } else {
+                                        try {
+                                                geminiRestClient.listModels(settings.apiKey)
+                                        } catch (e: CancellationException) {
+                                                throw e
+                                        } catch (e: Exception) {
+                                                error = e.message ?: "Couldn't load models"
+                                                null
+                                        }
+                                }
+                        _modelListState.value =
+                                ModelListState(
+                                        options = ModelOptions.build(fetched, settings.modelId),
+                                        isLoading = false,
+                                        error = error
+                                )
+                }
+        }
 
         val selectedCurrency: StateFlow<String> =
                 userPreferencesRepository.selectedCurrency.stateIn(
@@ -90,3 +129,9 @@ class SettingsViewModel(
                 }
         }
 }
+
+data class ModelListState(
+        val options: List<ModelOption> = emptyList(),
+        val isLoading: Boolean = false,
+        val error: String? = null,
+)

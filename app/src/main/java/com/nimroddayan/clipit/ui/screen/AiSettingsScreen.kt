@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -17,6 +18,7 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,8 +31,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.nimroddayan.clipit.data.gemini.DetectionMode
-import com.nimroddayan.clipit.data.gemini.GeminiModel
 import com.nimroddayan.clipit.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
@@ -65,6 +68,9 @@ fun AiSettingsScreen(
         val detectionMode by viewModel.detectionMode.collectAsState()
         var selectedDetectionMode by remember(detectionMode) { mutableStateOf(detectionMode) }
         var detectionModeExpanded by remember { mutableStateOf(false) }
+
+        val modelListState by viewModel.modelListState.collectAsState()
+        LaunchedEffect(Unit) { viewModel.refreshModels() }
 
         Scaffold(
                 snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
@@ -155,6 +161,7 @@ fun AiSettingsScreen(
                                                                         viewModel.saveGeminiApiKey(
                                                                                 apiKey
                                                                         )
+                                                                        viewModel.refreshModels()
                                                                         snackbarHostState
                                                                                 .showSnackbar(
                                                                                         "API Key saved successfully"
@@ -281,34 +288,67 @@ fun AiSettingsScreen(
                                                                         Modifier.menuAnchor()
                                                                                 .fillMaxWidth(),
                                                                 readOnly = true,
-                                                                value = selectedModel,
+                                                                value =
+                                                                        modelListState.options
+                                                                                .firstOrNull { it.id == selectedModel }
+                                                                                ?.label
+                                                                                ?: selectedModel,
                                                                 onValueChange = {},
                                                                 label = { Text("Gemini Model") },
                                                                 trailingIcon = {
-                                                                        ExposedDropdownMenuDefaults
-                                                                                .TrailingIcon(
-                                                                                        expanded =
-                                                                                                expanded
-                                                                                )
+                                                                        ExposedDropdownMenuDefaults.TrailingIcon(
+                                                                                expanded = expanded
+                                                                        )
                                                                 },
                                                         )
                                                         ExposedDropdownMenu(
                                                                 expanded = expanded,
-                                                                onDismissRequest = {
-                                                                        expanded = false
-                                                                },
+                                                                onDismissRequest = { expanded = false },
                                                         ) {
-                                                                GeminiModel.entries.forEach { model ->
+                                                                modelListState.options.forEach { option ->
                                                                         DropdownMenuItem(
-                                                                                text = { Text(model.modelName) },
+                                                                                text = { Text(option.label) },
                                                                                 onClick = {
-                                                                                        selectedModel = model.modelName
+                                                                                        selectedModel = option.id
                                                                                         expanded = false
                                                                                 },
+                                                                                enabled = option.available,
                                                                                 contentPadding =
                                                                                         ExposedDropdownMenuDefaults
                                                                                                 .ItemContentPadding,
                                                                         )
+                                                                }
+                                                        }
+                                                }
+                                                if (modelListState.isLoading) {
+                                                        Row(
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                modifier = Modifier.padding(top = 8.dp)
+                                                        ) {
+                                                                CircularProgressIndicator(
+                                                                        modifier = Modifier.size(16.dp),
+                                                                        strokeWidth = 2.dp
+                                                                )
+                                                                Text(
+                                                                        "Loading models…",
+                                                                        modifier = Modifier.padding(start = 8.dp),
+                                                                        style = MaterialTheme.typography.bodySmall
+                                                                )
+                                                        }
+                                                }
+                                                modelListState.error?.let { error ->
+                                                        Row(
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                modifier = Modifier.padding(top = 8.dp)
+                                                        ) {
+                                                                Text(
+                                                                        "Couldn't load models: $error",
+                                                                        modifier = Modifier.weight(1f),
+                                                                        style = MaterialTheme.typography.bodySmall,
+                                                                        color = MaterialTheme.colorScheme.error
+                                                                )
+                                                                TextButton(onClick = { viewModel.refreshModels() }) {
+                                                                        Text("Retry")
                                                                 }
                                                         }
                                                 }
