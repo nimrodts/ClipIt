@@ -3,6 +3,7 @@
 import android.content.Context
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.generationConfig
+import com.nimroddayan.clipit.data.ai.CouponDetector
 import java.io.IOException
 import java.time.LocalDate
 import kotlinx.coroutines.flow.first
@@ -235,32 +236,5 @@ class GeminiCouponExtractor(
                 redemptionUrl = null
         )
     }
-    suspend fun hasCoupon(text: String): Boolean {
-        // 1. Quick local check (Optimization & Fallback)
-        val keywords =
-                listOf(
-                        "coupon",
-                        "code",
-                        "voucher",
-                        "gift card",
-                        "promo",
-                        "קופון",
-                        "קוד",
-                        "שובר",
-                        "מתנה",
-                        "הטבה",
-                        "מימוש",
-                        "אסמכתא",
-                        "כרטיס",
-                        "Gift"
-                )
-        if (keywords.any { text.contains(it, ignoreCase = true) }) {
-            android.util.Log.d("GeminiExtractor", "Local keyword match found. Skipping AI check.")
-            return true
-        }
-
-        // Use Local LLM (AICore/Gemini Nano)
-        val localClassifier = LocalCouponClassifier(context)
-        return localClassifier.isCoupon(text)
-    }
+    fun hasCoupon(text: String): Boolean = CouponDetector().isLikelyCoupon(text)
 }
