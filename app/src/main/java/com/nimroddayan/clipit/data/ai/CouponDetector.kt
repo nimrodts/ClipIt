@@ -8,14 +8,21 @@ package com.nimroddayan.clipit.data.ai
 class CouponDetector {
 
     fun isLikelyCoupon(text: String): Boolean {
-        if (text.isBlank()) return false
-        val lower = text.lowercase()
-
-        if (OTP_PHRASES.any { lower.contains(it) } || OTP_WORDS.containsMatchIn(text)) return false
-        if (COUPON_KEYWORDS.any { lower.contains(it) }) return true
-        if (CONTEXT_REJECT_PHRASES.any { lower.contains(it) }) return false
+        if (text.isBlank() || isSensitive(text)) return false
+        if (COUPON_KEYWORDS.any { text.lowercase().contains(it) }) return true
 
         return CODE_PATTERN.containsMatchIn(text) && VALUE_PATTERN.containsMatchIn(text)
+    }
+
+
+    /**
+     * Messages that must never leave the phone, in any detection mode: one-time passwords always, and
+     * bank, delivery or "do not share" messages unless they explicitly mention a coupon.
+     */
+    fun isSensitive(text: String): Boolean {
+        val lower = text.lowercase()
+        if (OTP_PHRASES.any { lower.contains(it) } || OTP_WORDS.containsMatchIn(text)) return true
+        return CONTEXT_REJECT_PHRASES.any { lower.contains(it) } && COUPON_KEYWORDS.none { lower.contains(it) }
     }
 
 
@@ -31,8 +38,8 @@ class CouponDetector {
         val OTP_WORDS = Regex("""\b(otp|2fa)\b""", RegexOption.IGNORE_CASE)
 
         val COUPON_KEYWORDS = listOf(
-            "coupon", "voucher", "gift card", "giftcard", "promo code", "redeem",
-            "קופון", "שובר", "תו קנייה", "תו שי", "כרטיס מתנה", "גיפט קארד", "גיפטקארד", "מימוש",
+            "coupon", "voucher", "gift", "promo", "redeem",
+            "קופון", "שובר", "תו קנייה", "תו שי", "כרטיס מתנה", "גיפט קארד", "גיפטקארד", "מימוש", "הטבה",
         )
 
         val CONTEXT_REJECT_PHRASES = listOf(
@@ -44,7 +51,7 @@ class CouponDetector {
         )
 
         val CODE_PATTERN = Regex(
-            """(?<!\d)\d{4,}-\d{4,}(?!\d)|\b[A-Z0-9]{4,}-[A-Z0-9]{4,}\b|\b(?=[A-Z0-9]*\d)(?=[A-Z0-9]*[A-Z])[A-Z0-9]{6,}\b"""
+            """(?<!\d)\d{4,}-\d{4,}(?!\d)|\b[A-Z0-9]{4,}-[A-Z0-9]{4,}\b|\b(?=[A-Z0-9]*\d)(?=[A-Z0-9]*[A-Z])[A-Z0-9]{6,}\b|(?<![\d-])\d{6,}(?![\d-])"""
         )
 
         val VALUE_PATTERN = Regex(

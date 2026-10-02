@@ -171,6 +171,13 @@ class GeminiRestClientTest {
         assertTrue(error!!.message!!.contains("SAFETY"))
     }
 
+    @Test
+    fun `default http client waits long enough for slow thinking models`() {
+        val http = GeminiRestClient.defaultHttpClient()
+        assertTrue("read timeout ${http.readTimeoutMillis}", http.readTimeoutMillis == 0 || http.readTimeoutMillis >= 90_000)
+        assertEquals(90_000, http.callTimeoutMillis)
+    }
+
     private fun candidateBody(vararg texts: String): String =
         buildJsonObject {
             putJsonArray("candidates") {

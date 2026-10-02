@@ -120,8 +120,12 @@ class GeminiRestClient(
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         private val json = Json { ignoreUnknownKeys = true }
 
-        private fun defaultHttpClient(): OkHttpClient =
-            OkHttpClient.Builder().callTimeout(60, TimeUnit.SECONDS).build()
+        internal fun defaultHttpClient(): OkHttpClient =
+            OkHttpClient.Builder()
+                // Thinking models send nothing until they finish, so the read timeout must cover the whole call.
+                .callTimeout(90, TimeUnit.SECONDS)
+                .readTimeout(90, TimeUnit.SECONDS)
+                .build()
     }
 }
 

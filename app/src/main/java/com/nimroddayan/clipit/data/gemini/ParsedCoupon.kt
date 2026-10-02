@@ -12,5 +12,6 @@ data class ParsedCoupon(
     companion object {
         const val ERROR_QUOTA = "Quota Limit Reached"
         const val ERROR_INVALID_KEY = "Invalid Gemini API key"
+        const val ERROR_TRANSIENT = "AI is temporarily unavailable. Please try again."
     }
 }

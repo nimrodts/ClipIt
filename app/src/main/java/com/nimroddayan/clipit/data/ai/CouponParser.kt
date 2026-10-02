@@ -4,10 +4,12 @@ import android.content.Context
 import android.util.Log
 import com.nimroddayan.clipit.CouponApplication
 import com.nimroddayan.clipit.data.gemini.DetectionMode
+import com.nimroddayan.clipit.data.gemini.GeminiApiException
 import com.nimroddayan.clipit.data.gemini.GeminiApiKeyRepository
 import com.nimroddayan.clipit.data.gemini.GeminiQuotaException
 import com.nimroddayan.clipit.data.gemini.InvalidApiKeyException
 import com.nimroddayan.clipit.data.gemini.ParsedCoupon
+import java.io.IOException
 import java.time.LocalDate
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -23,8 +25,10 @@ class CouponParser(
     private val today: () -> LocalDate = LocalDate::now,
 ) {
 
-    suspend fun shouldExtract(text: String): Boolean =
-        settingsProvider().detectionMode == DetectionMode.ALWAYS_EXTRACT || detector.isLikelyCoupon(text)
+    suspend fun shouldExtract(text: String): Boolean {
+        if (detector.isSensitive(text)) return false
+        return settingsProvider().detectionMode == DetectionMode.ALWAYS_EXTRACT || detector.isLikelyCoupon(text)
+    }
 
 
     suspend fun parse(text: String): ParsedCoupon {
@@ -45,6 +49,17 @@ class CouponParser(
             } catch (e: InvalidApiKeyException) {
                 Log.w(TAG, "Gemini rejected the API key, falling back to regex")
                 regexExtractor.extract(text).copy(error = ParsedCoupon.ERROR_INVALID_KEY)
+            } catch (e: IOException) {
+                Log.w(TAG, "AI unreachable, falling back to regex", e)
+                regexExtractor.extract(text).copy(error = ParsedCoupon.ERROR_TRANSIENT)
+            } catch (e: GeminiApiException) {
+                Log.e(TAG, "Gemini returned HTTP ${e.httpCode}, falling back to regex", e)
+                val error = if (e.httpCode >= 500 || e.httpCode == 408) {
+                    ParsedCoupon.ERROR_TRANSIENT
+                } else {
+                    "AI Extraction Failed: ${e.message}"
+                }
+                regexExtractor.extract(text).copy(error = error)
             } catch (e: Exception) {
                 Log.e(TAG, "AI extraction failed, falling back to regex", e)
                 regexExtractor.extract(text).copy(error = "AI Extraction Failed: ${e.message}")

@@ -33,6 +33,21 @@ class CouponDetectorTest {
     }
 
     @Test
+    fun `benefit wording and digit-only codes with a value are detected`() {
+        assertTrue(detector.isLikelyCoupon("קיבלת הטבה בשווי 50 ₪ ב-Fox. קוד: 483920"))
+        assertTrue(detector.isLikelyCoupon("Your store credit of ₪50 is ready, use 483920 at checkout"))
+        assertTrue(detector.isLikelyCoupon("A gift for you from Castro"))
+    }
+
+    @Test
+    fun `sensitive messages are flagged regardless of mode`() {
+        assertTrue(detector.isSensitive("Your verification code is 482913"))
+        assertTrue(detector.isSensitive("Transaction on your card ending 1234: ₪250 at SHUFERSAL"))
+        assertFalse(detector.isSensitive("Your gift card code 1234-5678. Do not share this code."))
+        assertFalse(detector.isSensitive("hello there"))
+    }
+
+    @Test
     fun `keywords are case insensitive`() {
         assertTrue(detector.isLikelyCoupon("COUPON"))
         assertTrue(detector.isLikelyCoupon("Coupon"))

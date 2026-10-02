@@ -1,6 +1,7 @@
 package com.nimroddayan.clipit.data.ai
 
 import com.nimroddayan.clipit.data.gemini.DetectionMode
+import com.nimroddayan.clipit.data.gemini.GeminiApiException
 import com.nimroddayan.clipit.data.gemini.GeminiQuotaException
 import com.nimroddayan.clipit.data.gemini.InvalidApiKeyException
 import com.nimroddayan.clipit.data.gemini.ParsedCoupon
@@ -90,9 +91,30 @@ class CouponParserTest {
     }
 
     @Test
-    fun `network error falls back to regex with message`() = runTest {
+    fun `network error falls back to regex with transient marker`() = runTest {
         val result = parser(cloud = FakeExtractor { throw IOException("offline") }).parse("text")
-        assertEquals("AI Extraction Failed: offline", result.error)
+        assertEquals(ParsedCoupon.ERROR_TRANSIENT, result.error)
+        assertEquals("ABC123", result.redeemCode)
+    }
+
+    @Test
+    fun `server overload is transient`() = runTest {
+        val result = parser(cloud = FakeExtractor { throw GeminiApiException(503, "high demand") }).parse("text")
+        assertEquals(ParsedCoupon.ERROR_TRANSIENT, result.error)
+    }
+
+    @Test
+    fun `client errors are not transient and keep the message`() = runTest {
+        val result = parser(cloud = FakeExtractor { throw GeminiApiException(400, "bad model") }).parse("text")
+        assertEquals("AI Extraction Failed: bad model", result.error)
+    }
+
+    @Test
+    fun `always extract mode still keeps OTP and bank SMS on the phone`() = runTest {
+        val always = parser(mode = DetectionMode.ALWAYS_EXTRACT)
+        assertFalse(always.shouldExtract("Your verification code is 482913"))
+        assertFalse(always.shouldExtract("בוצעה עסקה בכרטיס 1234 בסך 250 ש\"ח"))
+        assertTrue(always.shouldExtract("hello there"))
     }
 
     @Test

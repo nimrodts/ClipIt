@@ -6,7 +6,8 @@ data class ModelOption(val id: String, val label: String, val available: Boolean
 object ModelOptions {
 
     fun build(fetched: List<GeminiModelInfo>?, selectedId: String): List<ModelOption> {
-        val options = (fetched?.map { ModelOption(it.id, labelFor(it), available = true) }
+        val options = (fetched?.filter { isUsableForExtraction(it.id) }
+            ?.map { ModelOption(it.id, labelFor(it), available = true) }
             ?: GeminiModel.entries.map { ModelOption(it.modelName, it.modelName, available = true) })
             .distinctBy { it.id }
             .sortedBy { it.label.lowercase() }
@@ -19,6 +20,14 @@ object ModelOptions {
         }
         return listOf(selected) + options
     }
+
+
+    // Gemma rejects system instructions/JSON mode; the rest are audio, image, embedding or agent models.
+    private val UNSUITABLE_MARKERS = listOf("tts", "audio", "image", "embedding", "live", "computer-use", "robotics")
+
+
+    private fun isUsableForExtraction(id: String): Boolean =
+        id.startsWith("gemini-") && UNSUITABLE_MARKERS.none { id.contains(it) }
 
 
     private fun labelFor(model: GeminiModelInfo): String =

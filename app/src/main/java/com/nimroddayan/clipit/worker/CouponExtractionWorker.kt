@@ -64,6 +64,11 @@ class CouponExtractionWorker(context: Context, params: WorkerParameters) :
                         "Coupons extraction paused. Will retry automatically."
                 )
                 return Result.retry()
+            } else if (parsedCoupon.error == ParsedCoupon.ERROR_TRANSIENT &&
+                            runAttemptCount < MAX_TRANSIENT_RETRIES
+            ) {
+                android.util.Log.w("CouponWorker", "AI temporarily unavailable, retrying later")
+                return Result.retry()
             } else if (parsedCoupon.error != null) {
                 android.util.Log.w(
                         "CouponWorker",
@@ -150,6 +155,11 @@ class CouponExtractionWorker(context: Context, params: WorkerParameters) :
             android.util.Log.e("CouponWorker", "Extraction failed", e)
             return Result.failure()
         }
+    }
+
+    private companion object {
+        // After this many tries the regex result is saved instead, so the coupon isn't lost.
+        const val MAX_TRANSIENT_RETRIES = 3
     }
 
     private fun showNotification(title: String, message: String) {

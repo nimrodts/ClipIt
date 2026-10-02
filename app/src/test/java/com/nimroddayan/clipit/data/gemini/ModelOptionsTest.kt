@@ -22,6 +22,20 @@ class ModelOptionsTest {
     }
 
     @Test
+    fun `models that cannot extract coupons are hidden`() {
+        val noisy = fetched + listOf(
+            "gemma-3-27b-it", "gemini-2.5-flash-preview-tts", "gemini-2.5-flash-native-audio-latest",
+            "gemini-2.5-flash-image", "gemini-2.5-computer-use-preview-10-2025", "gemini-robotics-er-1.5-preview",
+            "gemini-live-2.5-flash", "gemini-embedding-001", "deep-research-preview-04-2026",
+            "antigravity-preview-latest",
+        ).map { GeminiModelInfo(it, it, null) }
+
+        val options = ModelOptions.build(noisy, "gemini-2.5-flash")
+
+        assertEquals(listOf("gemini-2.5-flash", "gemini-2.5-pro"), options.map { it.id })
+    }
+
+    @Test
     fun `selected model missing from fetched list is kept and marked unavailable`() {
         val options = ModelOptions.build(fetched, "gemini-1.5-flash")
         assertEquals("gemini-1.5-flash", options[0].id)
