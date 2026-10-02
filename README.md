@@ -17,8 +17,9 @@ ClipIt is a smart Android application designed to organize, track, and redeem de
 *   **One-Time Use**: Support for single-use coupons that are automatically archived after redemption.
 
 ### 🧠 AI Integration (Gemini)
-*   **Smart Parsing**: Powered by Google's Gemini 1.5 Pro/Flash, the app can intelligently parse coupon details (name, code, value, date) from unstructured text or messages.
-*   **Customizable**: Configure your own Gemini API key and select preferred models and temperature settings directly in the app.
+*   **Private by default**: incoming SMS are first checked on the phone. One-time passwords, bank alerts and delivery messages are never sent anywhere.
+*   **Smart Parsing**: messages that look like coupons are parsed by Gemini (store, code, total value, expiry, redemption link) with a strict JSON schema, falling back to on-device regex if the AI is unavailable.
+*   **Bring your own key**: requests go directly from your phone to Google's Gemini API with your own API key. Pick any model your key can use; the list is loaded live from the API.
 
 ### ☁️ Cloud & Local Backup
 *   **Google Drive Sync**: Seamlessly backup your entire database to Google Drive and restore it on any device.
