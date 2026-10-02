@@ -30,26 +30,26 @@ class SettingsViewModel(
                         initialValue = ""
                 )
 
-        val geminiModel: StateFlow<GeminiModel> =
+        val geminiModel: StateFlow<String> =
                 geminiApiKeyRepository.getModel.stateIn(
                         scope = viewModelScope,
                         started = SharingStarted.WhileSubscribed(5000),
-                        initialValue = GeminiModel.GEMINI_FLASH_LATEST
+                        initialValue = GeminiModel.DEFAULT_MODEL_ID
                 )
 
         val geminiTemperature: StateFlow<Float> =
                 geminiApiKeyRepository.getTemperature.stateIn(
                         scope = viewModelScope,
                         started = SharingStarted.WhileSubscribed(5000),
-                        initialValue = 0.15f
+                        initialValue = GeminiApiKeyRepository.DEFAULT_TEMPERATURE
                 )
 
         suspend fun saveGeminiApiKey(apiKey: String) {
                 geminiApiKeyRepository.saveApiKey(apiKey)
         }
 
-        suspend fun saveGeminiModel(model: GeminiModel) {
-                geminiApiKeyRepository.saveModel(model)
+        suspend fun saveGeminiModel(modelId: String) {
+                geminiApiKeyRepository.saveModel(modelId)
         }
 
         suspend fun saveGeminiTemperature(temperature: Float) {

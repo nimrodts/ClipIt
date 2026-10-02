@@ -27,7 +27,7 @@ class GeminiCouponExtractor(
 
         val generativeModel =
                 GenerativeModel(
-                        modelName = model.modelName,
+                        modelName = model,
                         apiKey = apiKey,
                         generationConfig =
                                 generationConfig {

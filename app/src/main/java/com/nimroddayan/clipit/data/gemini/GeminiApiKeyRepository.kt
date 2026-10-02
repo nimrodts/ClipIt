@@ -1,4 +1,4 @@
-﻿package com.nimroddayan.clipit.data.gemini
+package com.nimroddayan.clipit.data.gemini
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -7,7 +7,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.nimroddayan.clipit.data.ai.AiSettings
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -21,31 +23,23 @@ class GeminiApiKeyRepository(private val context: Context) {
     val getApiKey: Flow<String> =
             context.dataStore.data.map { preferences -> preferences[geminiApiKey] ?: "" }
 
-    val getModel: Flow<GeminiModel> =
-            context.dataStore.data.map { preferences ->
-                val modelName = preferences[geminiModel] ?: GeminiModel.GEMINI_FLASH_LATEST.name
-                GeminiModel.valueOf(modelName)
-            }
+    val getModel: Flow<String> =
+            context.dataStore.data.map { preferences -> GeminiModel.toModelId(preferences[geminiModel]) }
 
     val getTemperature: Flow<Float> =
-            context.dataStore.data.map { preferences -> preferences[geminiTemperature] ?: 0.15f }
+            context.dataStore.data.map { preferences ->
+                preferences[geminiTemperature] ?: DEFAULT_TEMPERATURE
+            }
 
     val getDetectionMode: Flow<DetectionMode> =
-            context.dataStore.data.map { preferences ->
-                val modeName = preferences[detectionMode] ?: DetectionMode.LOCAL_HEURISTIC.name
-                try {
-                    DetectionMode.valueOf(modeName)
-                } catch (e: IllegalArgumentException) {
-                    DetectionMode.LOCAL_HEURISTIC
-                }
-            }
+            context.dataStore.data.map { preferences -> DetectionMode.fromStored(preferences[detectionMode]) }
 
     suspend fun saveApiKey(apiKey: String) {
         context.dataStore.edit { settings -> settings[geminiApiKey] = apiKey }
     }
 
-    suspend fun saveModel(model: GeminiModel) {
-        context.dataStore.edit { settings -> settings[geminiModel] = model.name }
+    suspend fun saveModel(modelId: String) {
+        context.dataStore.edit { settings -> settings[geminiModel] = modelId }
     }
 
     suspend fun saveTemperature(temperature: Float) {
@@ -55,11 +49,29 @@ class GeminiApiKeyRepository(private val context: Context) {
     suspend fun saveDetectionMode(mode: DetectionMode) {
         context.dataStore.edit { settings -> settings[detectionMode] = mode.name }
     }
+
+    suspend fun currentSettings(): AiSettings {
+        val preferences = context.dataStore.data.first()
+        return AiSettings(
+                apiKey = preferences[geminiApiKey] ?: "",
+                modelId = GeminiModel.toModelId(preferences[geminiModel]),
+                temperature = preferences[geminiTemperature] ?: DEFAULT_TEMPERATURE,
+                detectionMode = DetectionMode.fromStored(preferences[detectionMode]),
+        )
+    }
+
+    companion object {
+        const val DEFAULT_TEMPERATURE = 0.15f
+    }
 }
 
 enum class DetectionMode(val displayName: String) {
-    LOCAL_HEURISTIC("Local Heuristic (LLM)"),
-    ONLINE_GEMINI("Online Gemini"),
-    REGEX_ONLY("Regex Only"),
-    ALWAYS_EXTRACT("Always Extract")
+    LOCAL_HEURISTIC("On-device rules (recommended)"),
+    REGEX_ONLY("Offline only, no AI"),
+    ALWAYS_EXTRACT("Always extract (sends every SMS to AI)");
+
+    companion object {
+        fun fromStored(name: String?): DetectionMode =
+                entries.firstOrNull { it.name == name } ?: LOCAL_HEURISTIC
+    }
 }

@@ -281,7 +281,7 @@ fun AiSettingsScreen(
                                                                         Modifier.menuAnchor()
                                                                                 .fillMaxWidth(),
                                                                 readOnly = true,
-                                                                value = selectedModel.modelName,
+                                                                value = selectedModel,
                                                                 onValueChange = {},
                                                                 label = { Text("Gemini Model") },
                                                                 trailingIcon = {
@@ -298,19 +298,12 @@ fun AiSettingsScreen(
                                                                         expanded = false
                                                                 },
                                                         ) {
-                                                                GeminiModel.values().forEach { model
-                                                                        ->
+                                                                GeminiModel.entries.forEach { model ->
                                                                         DropdownMenuItem(
-                                                                                text = {
-                                                                                        Text(
-                                                                                                model.modelName
-                                                                                        )
-                                                                                },
+                                                                                text = { Text(model.modelName) },
                                                                                 onClick = {
-                                                                                        selectedModel =
-                                                                                                model
-                                                                                        expanded =
-                                                                                                false
+                                                                                        selectedModel = model.modelName
+                                                                                        expanded = false
                                                                                 },
                                                                                 contentPadding =
                                                                                         ExposedDropdownMenuDefaults
