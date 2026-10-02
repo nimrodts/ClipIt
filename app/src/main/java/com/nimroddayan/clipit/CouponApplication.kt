@@ -3,8 +3,11 @@
 import android.app.Application
 import com.nimroddayan.clipit.data.CouponRepository
 import com.nimroddayan.clipit.data.db.AppDatabase
+import com.nimroddayan.clipit.data.gemini.GeminiRestClient
 
 class CouponApplication : Application() {
+    val geminiRestClient: GeminiRestClient by lazy { GeminiRestClient() }
+
     private var _database: AppDatabase? = null
     val database: AppDatabase
         get() {

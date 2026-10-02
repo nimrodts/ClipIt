@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.nimroddayan.clipit.data.CouponRepository
 import com.nimroddayan.clipit.data.UserPreferencesRepository
 import com.nimroddayan.clipit.data.gemini.GeminiApiKeyRepository
-import com.nimroddayan.clipit.data.gemini.GeminiCouponExtractor
+import com.nimroddayan.clipit.data.ai.CouponParser
 
 class ViewModelFactory(
         private val context: Context,
@@ -19,7 +19,7 @@ class ViewModelFactory(
             @Suppress("UNCHECKED_CAST")
             return CouponViewModel(
                     couponRepository,
-                    GeminiCouponExtractor(context, geminiApiKeyRepository),
+                    CouponParser.create(context),
                     userPreferencesRepository
             ) as
                     T

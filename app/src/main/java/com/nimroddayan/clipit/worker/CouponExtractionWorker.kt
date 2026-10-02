@@ -17,8 +17,8 @@ import com.nimroddayan.clipit.CouponApplication
 import com.nimroddayan.clipit.MainActivity
 import com.nimroddayan.clipit.R
 import com.nimroddayan.clipit.data.UserPreferencesRepository
-import com.nimroddayan.clipit.data.gemini.GeminiApiKeyRepository
-import com.nimroddayan.clipit.data.gemini.GeminiCouponExtractor
+import com.nimroddayan.clipit.data.ai.CouponParser
+import com.nimroddayan.clipit.data.gemini.ParsedCoupon
 import com.nimroddayan.clipit.data.model.Coupon
 import kotlinx.coroutines.flow.first
 
@@ -45,11 +45,10 @@ class CouponExtractionWorker(context: Context, params: WorkerParameters) :
             return Result.success()
         }
 
-        // 2. Coupon Content Check
-        val geminiApiKeyRepository = GeminiApiKeyRepository(context)
-        val extractor = GeminiCouponExtractor(context, geminiApiKeyRepository)
+        // 2. Coupon Content Check (on-device, nothing leaves the phone here)
+        val parser = CouponParser.create(context)
 
-        if (!extractor.hasCoupon(smsBody)) {
+        if (!parser.shouldExtract(smsBody)) {
             android.util.Log.d("CouponWorker", "No coupon detected in message")
             return Result.success()
         }
@@ -58,8 +57,8 @@ class CouponExtractionWorker(context: Context, params: WorkerParameters) :
 
         // 3. Extract
         try {
-            val parsedCoupon = extractor.extractCoupon(smsBody)
-            if (parsedCoupon.error == "Quota Limit Reached") {
+            val parsedCoupon = parser.parse(smsBody)
+            if (parsedCoupon.error == ParsedCoupon.ERROR_QUOTA) {
                 showNotification(
                         "Quota Exceeded",
                         "Coupons extraction paused. Will retry automatically."
@@ -144,15 +143,6 @@ class CouponExtractionWorker(context: Context, params: WorkerParameters) :
             repository.insert(finalCoupon)
 
             return Result.success()
-        } catch (e: com.google.ai.client.generativeai.type.QuotaExceededException) {
-            // This catch block might not be reached if exception is caught in extractor,
-            // but keeping it for safety if extractor throws it directly or other parts do.
-            e.printStackTrace()
-            showNotification(
-                    "Quota Exceeded",
-                    "Coupons extraction paused. Will retry automatically."
-            )
-            return Result.retry()
         } catch (e: com.nimroddayan.clipit.data.DuplicateRedeemCodeException) {
             android.util.Log.w("CouponWorker", "Duplicate coupon detected, ignoring.")
             return Result.success()

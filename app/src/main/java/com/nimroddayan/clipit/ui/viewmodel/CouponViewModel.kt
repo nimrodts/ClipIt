@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.nimroddayan.clipit.data.CouponRepository
 import com.nimroddayan.clipit.data.DuplicateRedeemCodeException
 import com.nimroddayan.clipit.data.UserPreferencesRepository
-import com.nimroddayan.clipit.data.gemini.GeminiCouponExtractor
+import com.nimroddayan.clipit.data.ai.CouponParser
 import com.nimroddayan.clipit.data.gemini.ParsedCoupon
 import com.nimroddayan.clipit.data.model.Coupon
 import com.nimroddayan.clipit.data.model.SortOption
@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 
 class CouponViewModel(
         private val couponRepository: CouponRepository,
-        private val geminiCouponExtractor: GeminiCouponExtractor,
+        private val couponParser: CouponParser,
         private val userPreferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
 
@@ -121,7 +121,7 @@ class CouponViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val coupon = geminiCouponExtractor.extractCoupon(text)
+                val coupon = couponParser.parse(text)
                 _parsedCoupon.value = coupon
                 if (coupon.error != null) {
                     _error.value = coupon.error

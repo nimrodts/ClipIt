@@ -97,7 +97,6 @@ dependencies {
     
     // Gemini
     implementation(libs.okhttp)
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.2.0")
