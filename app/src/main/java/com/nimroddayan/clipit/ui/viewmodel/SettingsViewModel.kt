@@ -9,6 +9,8 @@ import com.nimroddayan.clipit.data.gemini.GeminiModel
 import com.nimroddayan.clipit.data.gemini.GeminiRestClient
 import com.nimroddayan.clipit.data.gemini.ModelOption
 import com.nimroddayan.clipit.data.gemini.ModelOptions
+import com.nimroddayan.clipit.data.gemini.ModelTestResult
+import com.nimroddayan.clipit.data.gemini.ModelTester
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -52,6 +54,63 @@ class SettingsViewModel(
                                         isLoading = false,
                                         error = error
                                 )
+                }
+        }
+
+        private val modelTester = ModelTester(geminiRestClient::testModel)
+
+        val modelTestResults: StateFlow<Map<String, ModelTestResult>> =
+                geminiApiKeyRepository.getModelTestResults.stateIn(
+                        scope = viewModelScope,
+                        started = SharingStarted.WhileSubscribed(5000),
+                        initialValue = emptyMap()
+                )
+
+        private val _testingModelIds = MutableStateFlow<Set<String>>(emptySet())
+        /** Models with a test request in flight. */
+        val testingModelIds: StateFlow<Set<String>> = _testingModelIds.asStateFlow()
+
+        private val _isTestingAllModels = MutableStateFlow(false)
+        val isTestingAllModels: StateFlow<Boolean> = _isTestingAllModels.asStateFlow()
+
+        /** Models "Test all models" would send a request to. */
+        fun testableModelIds(): List<String> =
+                _modelListState.value.options.filter { it.available }.map { it.id }
+
+        /** Sends one test request to [modelId] with the saved key and stores the result. */
+        fun testModel(modelId: String) {
+                if (modelId in _testingModelIds.value) return
+                viewModelScope.launch {
+                        val apiKey = geminiApiKeyRepository.currentSettings().apiKey
+                        if (apiKey.isBlank()) return@launch
+                        _testingModelIds.update { it + modelId }
+                        try {
+                                val result = modelTester.test(apiKey, modelId)
+                                geminiApiKeyRepository.saveModelTestResult(apiKey, modelId, result)
+                        } finally {
+                                _testingModelIds.update { it - modelId }
+                        }
+                }
+        }
+
+        /** Tests every listed model, a few at a time, storing each result as it arrives. */
+        fun testAllModels() {
+                if (_isTestingAllModels.value) return
+                viewModelScope.launch {
+                        val apiKey = geminiApiKeyRepository.currentSettings().apiKey
+                        val modelIds = testableModelIds()
+                        if (apiKey.isBlank() || modelIds.isEmpty()) return@launch
+                        _isTestingAllModels.value = true
+                        _testingModelIds.update { it + modelIds }
+                        try {
+                                modelTester.testAll(apiKey, modelIds) { modelId, result ->
+                                        geminiApiKeyRepository.saveModelTestResult(apiKey, modelId, result)
+                                        _testingModelIds.update { it - modelId }
+                                }
+                        } finally {
+                                _testingModelIds.update { it - modelIds.toSet() }
+                                _isTestingAllModels.value = false
+                        }
                 }
         }
 

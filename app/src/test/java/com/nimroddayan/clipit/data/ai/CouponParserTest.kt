@@ -5,6 +5,7 @@ import com.nimroddayan.clipit.data.gemini.GeminiApiException
 import com.nimroddayan.clipit.data.gemini.GeminiQuotaException
 import com.nimroddayan.clipit.data.gemini.InvalidApiKeyException
 import com.nimroddayan.clipit.data.gemini.ParsedCoupon
+import com.nimroddayan.clipit.data.gemini.QuotaLimit
 import java.io.IOException
 import java.time.LocalDate
 import kotlin.coroutines.cancellation.CancellationException
@@ -80,6 +81,14 @@ class CouponParserTest {
     fun `quota error falls back to regex with quota marker`() = runTest {
         val result = parser(cloud = FakeExtractor { throw GeminiQuotaException("quota") }).parse("text")
         assertEquals(ParsedCoupon.ERROR_QUOTA, result.error)
+    }
+
+    @Test
+    fun `model without free quota is reported as a non retryable error`() = runTest {
+        val error = GeminiQuotaException("limit: 0", QuotaLimit.NO_FREE_QUOTA)
+        val result = parser(cloud = FakeExtractor { throw error }).parse("text")
+        assertEquals(ParsedCoupon.ERROR_NO_FREE_QUOTA, result.error)
+        assertEquals(AiStatus.FAILED, PendingCouponBuilder.statusFor(result.error))
         assertEquals("ABC123", result.redeemCode)
         assertEquals("2027-10-02", result.expirationDate)
     }

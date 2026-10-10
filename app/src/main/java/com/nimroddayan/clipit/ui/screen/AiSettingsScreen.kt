@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -27,6 +28,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -46,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.nimroddayan.clipit.data.gemini.DetectionMode
+import com.nimroddayan.clipit.data.gemini.ModelTestResult
 import com.nimroddayan.clipit.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
@@ -71,6 +74,10 @@ fun AiSettingsScreen(
 
         val modelListState by viewModel.modelListState.collectAsState()
         LaunchedEffect(Unit) { viewModel.refreshModels() }
+        val modelTestResults by viewModel.modelTestResults.collectAsState()
+        val testingModelIds by viewModel.testingModelIds.collectAsState()
+        val isTestingAllModels by viewModel.isTestingAllModels.collectAsState()
+        var confirmTestAllCount by remember { mutableStateOf<Int?>(null) }
 
         Scaffold(
                 snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
@@ -307,7 +314,13 @@ fun AiSettingsScreen(
                                                         ) {
                                                                 modelListState.options.forEach { option ->
                                                                         DropdownMenuItem(
-                                                                                text = { Text(option.label) },
+                                                                                text = {
+                                                                                        Text(
+                                                                                                modelTestResults[option.id]
+                                                                                                        ?.let { "${option.label}  ·  ${it.badge}" }
+                                                                                                        ?: option.label
+                                                                                        )
+                                                                                },
                                                                                 onClick = {
                                                                                         selectedModel = option.id
                                                                                         expanded = false
@@ -352,6 +365,17 @@ fun AiSettingsScreen(
                                                                 }
                                                         }
                                                 }
+                                                ModelTestSection(
+                                                        result = modelTestResults[selectedModel],
+                                                        isTestingSelected = selectedModel in testingModelIds,
+                                                        isTestingAll = isTestingAllModels,
+                                                        hasApiKey = geminiApiKey.isNotBlank(),
+                                                        onTestSelected = { viewModel.testModel(selectedModel) },
+                                                        onTestAll = {
+                                                                confirmTestAllCount =
+                                                                        viewModel.testableModelIds().size
+                                                        }
+                                                )
                                                 Button(
                                                         onClick = {
                                                                 coroutineScope.launch {
@@ -422,5 +446,86 @@ fun AiSettingsScreen(
                                 }
                         }
                 }
+        }
+
+        confirmTestAllCount?.let { count ->
+                AlertDialog(
+                        onDismissRequest = { confirmTestAllCount = null },
+                        title = { Text("Test all models?") },
+                        text = {
+                                Text(
+                                        "This sends 1 short request to each of $count models. Each one counts " +
+                                                "as one request against that model's limits."
+                                )
+                        },
+                        confirmButton = {
+                                TextButton(
+                                        onClick = {
+                                                confirmTestAllCount = null
+                                                viewModel.testAllModels()
+                                        }
+                                ) { Text("Test $count models") }
+                        },
+                        dismissButton = {
+                                TextButton(onClick = { confirmTestAllCount = null }) { Text("Cancel") }
+                        }
+                )
+        }
+}
+
+
+/** Test buttons and the stored result for the selected model. */
+@Composable
+private fun ModelTestSection(
+        result: ModelTestResult?,
+        isTestingSelected: Boolean,
+        isTestingAll: Boolean,
+        hasApiKey: Boolean,
+        onTestSelected: () -> Unit,
+        onTestAll: () -> Unit,
+) {
+        when {
+                isTestingSelected ->
+                        Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(top = 8.dp)
+                        ) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                Text(
+                                        if (isTestingAll) "Testing all models…" else "Testing model…",
+                                        modifier = Modifier.padding(start = 8.dp),
+                                        style = MaterialTheme.typography.bodySmall
+                                )
+                        }
+                result != null ->
+                        Text(
+                                result.description,
+                                modifier = Modifier.padding(top = 8.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color =
+                                        if (result.isFailure) MaterialTheme.colorScheme.error
+                                        else MaterialTheme.colorScheme.primary
+                        )
+                !hasApiKey ->
+                        Text(
+                                "Save an API key to test models.",
+                                modifier = Modifier.padding(top = 8.dp),
+                                style = MaterialTheme.typography.bodySmall
+                        )
+        }
+        Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+                OutlinedButton(
+                        onClick = onTestSelected,
+                        enabled = hasApiKey && !isTestingSelected,
+                        modifier = Modifier.weight(1f)
+                ) { Text("Test model") }
+                OutlinedButton(
+                        onClick = onTestAll,
+                        enabled = hasApiKey && !isTestingAll,
+                        modifier = Modifier.weight(1f)
+                ) { Text(if (isTestingAll) "Testing…" else "Test all models") }
         }
 }

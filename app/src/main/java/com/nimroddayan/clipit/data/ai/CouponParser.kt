@@ -9,6 +9,7 @@ import com.nimroddayan.clipit.data.gemini.GeminiApiKeyRepository
 import com.nimroddayan.clipit.data.gemini.GeminiQuotaException
 import com.nimroddayan.clipit.data.gemini.InvalidApiKeyException
 import com.nimroddayan.clipit.data.gemini.ParsedCoupon
+import com.nimroddayan.clipit.data.gemini.QuotaLimit
 import java.io.IOException
 import java.time.LocalDate
 import kotlin.coroutines.cancellation.CancellationException
@@ -44,8 +45,14 @@ class CouponParser(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: GeminiQuotaException) {
-                Log.w(TAG, "Quota exceeded, falling back to regex")
-                regexExtractor.extract(text).copy(error = ParsedCoupon.ERROR_QUOTA)
+                Log.w(TAG, "Quota exceeded (${e.limit}), falling back to regex")
+                // A quota of 0 never recovers by waiting, so it must not be retried like a used-up one.
+                val error = if (e.limit == QuotaLimit.NO_FREE_QUOTA) {
+                    ParsedCoupon.ERROR_NO_FREE_QUOTA
+                } else {
+                    ParsedCoupon.ERROR_QUOTA
+                }
+                regexExtractor.extract(text).copy(error = error)
             } catch (e: InvalidApiKeyException) {
                 Log.w(TAG, "Gemini rejected the API key, falling back to regex")
                 regexExtractor.extract(text).copy(error = ParsedCoupon.ERROR_INVALID_KEY)

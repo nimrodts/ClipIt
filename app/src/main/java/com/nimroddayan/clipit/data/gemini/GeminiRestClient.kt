@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -92,6 +93,27 @@ class GeminiRestClient(
     }
 
 
+    /**
+     * Sends one minimal request to check that [modelId] answers for this key. Any successful response
+     * counts, even an empty one; failures throw like [generateJson]. Uses one request of the quota.
+     */
+    suspend fun testModel(apiKey: String, modelId: String): Unit = withContext(Dispatchers.IO) {
+        val url = baseUrl.newBuilder()
+            .addPathSegment("models")
+            .addPathSegment("$modelId:$GENERATE_CONTENT")
+            .build()
+        val body = buildJsonObject {
+            putJsonArray("contents") {
+                addJsonObject {
+                    put("role", "user")
+                    putJsonArray("parts") { addJsonObject { put("text", "Reply with OK.") } }
+                }
+            }
+        }
+        execute(Request.Builder().url(url).post(body.toString().toRequestBody(JSON_MEDIA_TYPE)), apiKey)
+    }
+
+
     private fun execute(builder: Request.Builder, apiKey: String): String {
         val request = builder.header(API_KEY_HEADER, apiKey).build()
         httpClient.newCall(request).execute().use { response ->
@@ -107,11 +129,30 @@ class GeminiRestClient(
         val message = error?.message ?: "HTTP $code"
         val keyInvalid = error?.details.orEmpty().any { it.reason == "API_KEY_INVALID" }
         return when {
-            code == 429 -> GeminiQuotaException(message)
+            code == 429 -> GeminiQuotaException(message, quotaLimitOf(error, message), retryAfterSeconds(error))
             keyInvalid || code == 401 || code == 403 -> InvalidApiKeyException(message, code)
             else -> GeminiApiException(code, message)
         }
     }
+
+
+    // A 429 carries google.rpc.QuotaFailure (which quota, its value) and google.rpc.RetryInfo details.
+    private fun quotaLimitOf(error: ErrorDto?, message: String): QuotaLimit {
+        val violations = error?.details.orEmpty().flatMap { it.violations }
+        return when {
+            violations.any { it.quotaValue?.content == "0" } || NO_QUOTA_MESSAGE.containsMatchIn(message) ->
+                QuotaLimit.NO_FREE_QUOTA
+            violations.any { it.quotaId.orEmpty().contains("PerDay") } -> QuotaLimit.PER_DAY
+            violations.any { it.quotaId.orEmpty().contains("PerMinute") } -> QuotaLimit.PER_MINUTE
+            else -> QuotaLimit.UNKNOWN
+        }
+    }
+
+
+    private fun retryAfterSeconds(error: ErrorDto?): Long? =
+        error?.details.orEmpty()
+            .firstNotNullOfOrNull { it.retryDelay?.removeSuffix("s")?.toDoubleOrNull() }
+            ?.let { kotlin.math.ceil(it).toLong() }
 
     companion object {
         const val DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/"
@@ -119,6 +160,7 @@ class GeminiRestClient(
         private const val GENERATE_CONTENT = "generateContent"
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         private val json = Json { ignoreUnknownKeys = true }
+        private val NO_QUOTA_MESSAGE = Regex("""\blimit: 0\b""")
 
         internal fun defaultHttpClient(): OkHttpClient =
             OkHttpClient.Builder()
@@ -165,4 +207,15 @@ private data class ErrorResponse(val error: ErrorDto)
 private data class ErrorDto(val message: String? = null, val details: List<ErrorDetailDto> = emptyList())
 
 @Serializable
-private data class ErrorDetailDto(val reason: String? = null)
+private data class ErrorDetailDto(
+    val reason: String? = null,
+    val violations: List<QuotaViolationDto> = emptyList(),
+    val retryDelay: String? = null,
+)
+
+@Serializable
+private data class QuotaViolationDto(
+    val quotaId: String? = null,
+    // An int64, which proto JSON may send as a string or a number.
+    val quotaValue: JsonPrimitive? = null,
+)

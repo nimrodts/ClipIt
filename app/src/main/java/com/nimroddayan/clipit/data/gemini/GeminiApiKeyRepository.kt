@@ -19,6 +19,20 @@ class GeminiApiKeyRepository(private val context: Context) {
     private val geminiModel = stringPreferencesKey("gemini_model")
     private val geminiTemperature = floatPreferencesKey("gemini_temperature")
     private val detectionMode = stringPreferencesKey("detection_mode")
+    private val modelTestResults = stringPreferencesKey("model_test_results")
+
+    /** Model test results for the saved API key; empty after the key changes. */
+    val getModelTestResults: Flow<Map<String, ModelTestResult>> =
+            context.dataStore.data.map { preferences ->
+                ModelTestStore.read(preferences[modelTestResults], preferences[geminiApiKey] ?: "")
+            }
+
+    suspend fun saveModelTestResult(apiKey: String, modelId: String, result: ModelTestResult) {
+        context.dataStore.edit { settings ->
+            settings[modelTestResults] =
+                    ModelTestStore.put(settings[modelTestResults], apiKey, modelId, result)
+        }
+    }
 
     val getApiKey: Flow<String> =
             context.dataStore.data.map { preferences -> preferences[geminiApiKey] ?: "" }
