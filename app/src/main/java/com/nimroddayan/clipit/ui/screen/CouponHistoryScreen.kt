@@ -1,5 +1,7 @@
 ﻿package com.nimroddayan.clipit.ui.screen
 
+import com.nimroddayan.clipit.ui.theme.extendedColors
+import com.nimroddayan.clipit.util.formatMoney
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -107,22 +109,24 @@ fun HistoryItem(
             }
         }
 
+        val accent = MaterialTheme.colorScheme.primary
+        val archiveColor = MaterialTheme.extendedColors.archive
+        val neutral = MaterialTheme.colorScheme.onSurfaceVariant
         fun getHistoryColor(action: String): Color {
             return when (action) {
-                "Coupon Used" -> Color(0xFF6750A4) // Primary
-                "Coupon Created" -> Color(0xFF4CAF50) // Green
-                "Coupon Archived" -> Color(0xFF757575) // Grey
-                else -> Color(0xFF625B71) // Secondary
+                "Coupon Used", "Coupon Created" -> accent
+                "Coupon Archived" -> archiveColor
+                else -> neutral
             }
         }
 
         ElevatedCard(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.elevatedCardElevation(2.dp),
+                elevation = CardDefaults.elevatedCardElevation(0.dp),
                 colors =
                         CardDefaults.elevatedCardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
+                                containerColor = MaterialTheme.extendedColors.card
                         )
         ) {
             Row(
@@ -160,7 +164,7 @@ fun HistoryItem(
 
                     if (operation.action == "Coupon Used") {
                         Text(
-                                text = "Used: $currencySymbol${operation.changeSummary}",
+                                text = "Used " + formatMoney(operation.changeSummary.toDoubleOrNull() ?: 0.0, currencySymbol),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold
@@ -178,7 +182,7 @@ fun HistoryItem(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                             text =
-                                    SimpleDateFormat("MM/dd/yyyy HH:mm", Locale.getDefault())
+                                    SimpleDateFormat("d MMM yyyy, HH:mm", Locale.getDefault())
                                             .format(operation.timestamp),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline

@@ -1,5 +1,12 @@
 package com.nimroddayan.clipit.ui.screen
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import com.nimroddayan.clipit.ui.theme.extendedColors
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -86,27 +93,18 @@ fun EditCouponDialog(
         val datePickerState =
                 rememberDatePickerState(initialSelectedDateMillis = validExpirationDate)
 
-        Dialog(onDismissRequest = onDismiss) {
-                ElevatedCard(
-                        shape = MaterialTheme.shapes.extraLarge,
-                        colors =
-                                CardDefaults.elevatedCardColors(
-                                        containerColor = MaterialTheme.colorScheme.surface
-                                ),
-                        elevation = CardDefaults.elevatedCardElevation(6.dp)
-                ) {
+        ModalBottomSheet(
+                onDismissRequest = onDismiss,
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                containerColor = MaterialTheme.extendedColors.sheet,
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        ) {
+                Box(Modifier.verticalScroll(rememberScrollState()).imePadding()) {
                         Column(
-                                modifier = Modifier.padding(24.dp),
+                                modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 32.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                                Icon(
-                                        Icons.Default.Edit,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(48.dp)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text("Edit Coupon", style = MaterialTheme.typography.headlineSmall)
+                                Text("Edit coupon", style = MaterialTheme.typography.headlineSmall)
                                 Spacer(modifier = Modifier.height(24.dp))
 
                                 OutlinedTextField(

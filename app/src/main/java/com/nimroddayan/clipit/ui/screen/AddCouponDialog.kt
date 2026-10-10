@@ -1,5 +1,11 @@
 package com.nimroddayan.clipit.ui.screen
 
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import com.nimroddayan.clipit.ui.theme.extendedColors
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -122,28 +128,19 @@ fun AddCouponDialog(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss) {
-        ElevatedCard(
-                shape = RoundedCornerShape(24.dp),
-                colors =
-                        CardDefaults.elevatedCardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                        ),
-                elevation = CardDefaults.elevatedCardElevation(6.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
+    ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.extendedColors.sheet,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+    ) {
+        Box {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.verticalScroll(rememberScrollState()).imePadding()) {
                 Column(
-                        modifier = Modifier.padding(24.dp),
+                        modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                            Icons.Default.AddCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Add New Coupon", style = MaterialTheme.typography.headlineSmall)
+                    Text("New coupon", style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(24.dp))
 
                     error?.let {
