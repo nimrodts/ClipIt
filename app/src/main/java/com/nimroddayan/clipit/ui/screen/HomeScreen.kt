@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -142,6 +143,8 @@ fun HomeScreen(
     var showPendingCouponsDialog by remember { mutableStateOf(false) }
 
     Scaffold(
+            // MainScaffold already applies the system bar insets around this screen.
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             modifier =
                     Modifier.pointerInput(Unit) {
                         detectTapGestures(onTap = { focusManager.clearFocus() })
