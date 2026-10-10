@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.nimroddayan.clipit.CouponApplication
 import com.nimroddayan.clipit.data.CouponRepository
 import com.nimroddayan.clipit.data.UserPreferencesRepository
+import com.nimroddayan.clipit.data.ai.CouponAiRetrier
 import com.nimroddayan.clipit.data.ai.CouponParser
 import com.nimroddayan.clipit.data.gemini.GeminiApiKeyRepository
 
@@ -21,7 +22,8 @@ class ViewModelFactory(
             return CouponViewModel(
                     couponRepository,
                     CouponParser.create(context),
-                    userPreferencesRepository
+                    userPreferencesRepository,
+                    CouponAiRetrier.create(context)
             ) as
                     T
         }

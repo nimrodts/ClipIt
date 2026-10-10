@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.nimroddayan.clipit.data.ai.AiStatus
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -31,4 +32,9 @@ data class Coupon(
         val isOneTime: Boolean = false,
         val isPending: Boolean = false,
         val redemptionUrl: String? = null,
+        // Set for coupons created from an SMS; aiStatus stays null unless the AI failed on it.
+        val sourceSms: String? = null,
+        val sourceSender: String? = null,
+        val aiStatus: AiStatus? = null,
+        val aiError: String? = null,
 )
