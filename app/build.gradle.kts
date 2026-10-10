@@ -40,6 +40,10 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        // android.util.Log and friends return defaults in JVM unit tests instead of throwing.
+        unitTests.isReturnDefaultValues = true
+    }
 
     packaging {
         resources {
@@ -92,7 +96,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     
     // Gemini
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+    implementation(libs.okhttp)
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.2.0")
@@ -108,6 +112,7 @@ dependencies {
 
     // Test
     testImplementation(libs.junit)
+    testImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

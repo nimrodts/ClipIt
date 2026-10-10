@@ -23,7 +23,12 @@ class CouponRepository(
         return couponDao.getCouponByIdFlow(couponId)
     }
 
-    suspend fun insert(coupon: Coupon) {
+    suspend fun findByRedeemCode(redeemCode: String): Coupon? {
+        return couponDao.getCouponByRedeemCode(redeemCode)
+    }
+
+    /** Returns the new coupon's id. */
+    suspend fun insert(coupon: Coupon): Long {
         coupon.redeemCode?.takeIf { it.isNotBlank() }?.let {
             if (couponDao.getCouponByRedeemCode(it) != null) {
                 throw DuplicateRedeemCodeException("A coupon with this redeem code already exists.")
@@ -42,6 +47,7 @@ class CouponRepository(
                         couponState = couponState,
                 )
         couponHistoryDao.insert(history)
+        return id
     }
 
     suspend fun update(coupon: Coupon) {
@@ -185,6 +191,14 @@ class CouponRepository(
     suspend fun approveCoupon(coupon: Coupon) {
         val approvedCoupon = coupon.copy(isPending = false)
         update(approvedCoupon)
+    }
+
+    /**
+     * Overwrites a pending coupon with a new AI result. Skips [update]'s history, which would log a
+     * changed value as money spent.
+     */
+    suspend fun replacePending(coupon: Coupon) {
+        couponDao.update(coupon)
     }
 
     suspend fun deletePendingCoupon(coupon: Coupon) {

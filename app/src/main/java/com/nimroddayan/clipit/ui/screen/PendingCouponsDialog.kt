@@ -9,11 +9,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.nimroddayan.clipit.data.ai.AiStatus
 import com.nimroddayan.clipit.data.model.Coupon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -23,6 +25,8 @@ fun PendingCouponsDialog(
         onApprove: (Coupon) -> Unit,
         onReject: (Coupon) -> Unit,
         onEdit: (Coupon) -> Unit,
+        onRetryAi: (Coupon) -> Unit,
+        aiRetryingIds: Set<Long>,
         onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -38,7 +42,9 @@ fun PendingCouponsDialog(
                                     coupon = coupon,
                                     onApprove = { onApprove(coupon) },
                                     onReject = { onReject(coupon) },
-                                    onEdit = { onEdit(coupon) }
+                                    onEdit = { onEdit(coupon) },
+                                    onRetryAi = { onRetryAi(coupon) },
+                                    isRetryingAi = coupon.id in aiRetryingIds
                             )
                             HorizontalDivider()
                         }
@@ -54,7 +60,9 @@ fun PendingCouponItem(
         coupon: Coupon,
         onApprove: () -> Unit,
         onReject: () -> Unit,
-        onEdit: () -> Unit
+        onEdit: () -> Unit,
+        onRetryAi: () -> Unit,
+        isRetryingAi: Boolean
 ) {
     Column(modifier = Modifier.fillMaxWidth().clickable { onEdit() }.padding(vertical = 8.dp)) {
         Text(
@@ -62,6 +70,9 @@ fun PendingCouponItem(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
         )
+        if (coupon.aiStatus != null) {
+            AiFailureRow(coupon = coupon, onRetryAi = onRetryAi, isRetryingAi = isRetryingAi)
+        }
         Text(text = "Value: ${coupon.currentValue}", style = MaterialTheme.typography.bodyMedium)
         if (!coupon.redeemCode.isNullOrBlank()) {
             Text(
@@ -110,5 +121,26 @@ fun PendingCouponItem(
                 Text("Approve")
             }
         }
+    }
+}
+
+@Composable
+private fun AiFailureRow(coupon: Coupon, onRetryAi: () -> Unit, isRetryingAi: Boolean) {
+    val status =
+            if (coupon.aiStatus == AiStatus.FAILED_RETRYING) "AI unavailable — retrying automatically"
+            else "AI failed"
+    Text(
+            text = coupon.aiError?.let { "$status: $it" } ?: status,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
+    )
+    TextButton(onClick = onRetryAi, enabled = !isRetryingAi) {
+        if (isRetryingAi) {
+            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+        } else {
+            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+        }
+        Spacer(modifier = Modifier.width(4.dp))
+        Text("Retry with AI")
     }
 }

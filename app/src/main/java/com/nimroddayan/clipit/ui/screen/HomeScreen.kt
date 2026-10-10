@@ -138,6 +138,7 @@ fun HomeScreen(
     }
 
     val pendingCoupons by couponViewModel.pendingCoupons.collectAsState(initial = emptyList())
+    val aiRetryingIds by couponViewModel.aiRetryingIds.collectAsState()
     var showPendingCouponsDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -419,6 +420,8 @@ fun HomeScreen(
                     showPendingCouponsDialog = false
                     showEditCouponDialog = coupon
                 },
+                onRetryAi = { coupon -> couponViewModel.retryAi(coupon) },
+                aiRetryingIds = aiRetryingIds,
                 onDismiss = { showPendingCouponsDialog = false }
         )
     }

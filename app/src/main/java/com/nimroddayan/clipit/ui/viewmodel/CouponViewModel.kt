@@ -5,7 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.nimroddayan.clipit.data.CouponRepository
 import com.nimroddayan.clipit.data.DuplicateRedeemCodeException
 import com.nimroddayan.clipit.data.UserPreferencesRepository
-import com.nimroddayan.clipit.data.gemini.GeminiCouponExtractor
+import com.nimroddayan.clipit.data.ai.CouponAiRetrier
+import com.nimroddayan.clipit.data.ai.CouponParser
 import com.nimroddayan.clipit.data.gemini.ParsedCoupon
 import com.nimroddayan.clipit.data.model.Coupon
 import com.nimroddayan.clipit.data.model.SortOption
@@ -15,12 +16,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class CouponViewModel(
         private val couponRepository: CouponRepository,
-        private val geminiCouponExtractor: GeminiCouponExtractor,
+        private val couponParser: CouponParser,
         private val userPreferencesRepository: UserPreferencesRepository,
+        private val couponAiRetrier: CouponAiRetrier,
 ) : ViewModel() {
 
     val sortOption: StateFlow<SortOption> =
@@ -66,6 +69,23 @@ class CouponViewModel(
 
     fun reject(coupon: Coupon) {
         viewModelScope.launch { couponRepository.deletePendingCoupon(coupon) }
+    }
+
+    private val _aiRetryingIds = MutableStateFlow<Set<Long>>(emptySet())
+    /** Pending coupons with a "Retry with AI" request in flight. */
+    val aiRetryingIds: StateFlow<Set<Long>> = _aiRetryingIds.asStateFlow()
+
+    /** Re-runs the AI on a pending coupon's SMS; a failure shows up as the coupon's new aiError. */
+    fun retryAi(coupon: Coupon) {
+        if (coupon.id in _aiRetryingIds.value) return
+        viewModelScope.launch {
+            _aiRetryingIds.update { it + coupon.id }
+            try {
+                couponAiRetrier.retryNow(coupon.id)
+            } finally {
+                _aiRetryingIds.update { it - coupon.id }
+            }
+        }
     }
 
     private val _parsedCoupon = MutableStateFlow<ParsedCoupon?>(null)
@@ -121,7 +141,7 @@ class CouponViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val coupon = geminiCouponExtractor.extractCoupon(text)
+                val coupon = couponParser.parse(text)
                 _parsedCoupon.value = coupon
                 if (coupon.error != null) {
                     _error.value = coupon.error

@@ -9,14 +9,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,12 +28,15 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,7 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.nimroddayan.clipit.data.gemini.DetectionMode
-import com.nimroddayan.clipit.data.gemini.GeminiModel
+import com.nimroddayan.clipit.data.gemini.ModelTestResult
 import com.nimroddayan.clipit.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
@@ -65,6 +71,13 @@ fun AiSettingsScreen(
         val detectionMode by viewModel.detectionMode.collectAsState()
         var selectedDetectionMode by remember(detectionMode) { mutableStateOf(detectionMode) }
         var detectionModeExpanded by remember { mutableStateOf(false) }
+
+        val modelListState by viewModel.modelListState.collectAsState()
+        LaunchedEffect(Unit) { viewModel.refreshModels() }
+        val modelTestResults by viewModel.modelTestResults.collectAsState()
+        val testingModelIds by viewModel.testingModelIds.collectAsState()
+        val isTestingAllModels by viewModel.isTestingAllModels.collectAsState()
+        var confirmTestAllCount by remember { mutableStateOf<Int?>(null) }
 
         Scaffold(
                 snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
@@ -155,6 +168,7 @@ fun AiSettingsScreen(
                                                                         viewModel.saveGeminiApiKey(
                                                                                 apiKey
                                                                         )
+                                                                        viewModel.refreshModels()
                                                                         snackbarHostState
                                                                                 .showSnackbar(
                                                                                         "API Key saved successfully"
@@ -281,37 +295,37 @@ fun AiSettingsScreen(
                                                                         Modifier.menuAnchor()
                                                                                 .fillMaxWidth(),
                                                                 readOnly = true,
-                                                                value = selectedModel.modelName,
+                                                                value =
+                                                                        modelListState.options
+                                                                                .firstOrNull { it.id == selectedModel }
+                                                                                ?.label
+                                                                                ?: selectedModel,
                                                                 onValueChange = {},
                                                                 label = { Text("Gemini Model") },
                                                                 trailingIcon = {
-                                                                        ExposedDropdownMenuDefaults
-                                                                                .TrailingIcon(
-                                                                                        expanded =
-                                                                                                expanded
-                                                                                )
+                                                                        ExposedDropdownMenuDefaults.TrailingIcon(
+                                                                                expanded = expanded
+                                                                        )
                                                                 },
                                                         )
                                                         ExposedDropdownMenu(
                                                                 expanded = expanded,
-                                                                onDismissRequest = {
-                                                                        expanded = false
-                                                                },
+                                                                onDismissRequest = { expanded = false },
                                                         ) {
-                                                                GeminiModel.values().forEach { model
-                                                                        ->
+                                                                modelListState.options.forEach { option ->
                                                                         DropdownMenuItem(
                                                                                 text = {
                                                                                         Text(
-                                                                                                model.modelName
+                                                                                                modelTestResults[option.id]
+                                                                                                        ?.let { "${option.label}  ·  ${it.badge}" }
+                                                                                                        ?: option.label
                                                                                         )
                                                                                 },
                                                                                 onClick = {
-                                                                                        selectedModel =
-                                                                                                model
-                                                                                        expanded =
-                                                                                                false
+                                                                                        selectedModel = option.id
+                                                                                        expanded = false
                                                                                 },
+                                                                                enabled = option.available,
                                                                                 contentPadding =
                                                                                         ExposedDropdownMenuDefaults
                                                                                                 .ItemContentPadding,
@@ -319,6 +333,49 @@ fun AiSettingsScreen(
                                                                 }
                                                         }
                                                 }
+                                                if (modelListState.isLoading) {
+                                                        Row(
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                modifier = Modifier.padding(top = 8.dp)
+                                                        ) {
+                                                                CircularProgressIndicator(
+                                                                        modifier = Modifier.size(16.dp),
+                                                                        strokeWidth = 2.dp
+                                                                )
+                                                                Text(
+                                                                        "Loading models…",
+                                                                        modifier = Modifier.padding(start = 8.dp),
+                                                                        style = MaterialTheme.typography.bodySmall
+                                                                )
+                                                        }
+                                                }
+                                                modelListState.error?.let { error ->
+                                                        Row(
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                modifier = Modifier.padding(top = 8.dp)
+                                                        ) {
+                                                                Text(
+                                                                        "Couldn't load models: $error",
+                                                                        modifier = Modifier.weight(1f),
+                                                                        style = MaterialTheme.typography.bodySmall,
+                                                                        color = MaterialTheme.colorScheme.error
+                                                                )
+                                                                TextButton(onClick = { viewModel.refreshModels() }) {
+                                                                        Text("Retry")
+                                                                }
+                                                        }
+                                                }
+                                                ModelTestSection(
+                                                        result = modelTestResults[selectedModel],
+                                                        isTestingSelected = selectedModel in testingModelIds,
+                                                        isTestingAll = isTestingAllModels,
+                                                        hasApiKey = geminiApiKey.isNotBlank(),
+                                                        onTestSelected = { viewModel.testModel(selectedModel) },
+                                                        onTestAll = {
+                                                                confirmTestAllCount =
+                                                                        viewModel.testableModelIds().size
+                                                        }
+                                                )
                                                 Button(
                                                         onClick = {
                                                                 coroutineScope.launch {
@@ -389,5 +446,86 @@ fun AiSettingsScreen(
                                 }
                         }
                 }
+        }
+
+        confirmTestAllCount?.let { count ->
+                AlertDialog(
+                        onDismissRequest = { confirmTestAllCount = null },
+                        title = { Text("Test all models?") },
+                        text = {
+                                Text(
+                                        "This sends 1 short request to each of $count models. Each one counts " +
+                                                "as one request against that model's limits."
+                                )
+                        },
+                        confirmButton = {
+                                TextButton(
+                                        onClick = {
+                                                confirmTestAllCount = null
+                                                viewModel.testAllModels()
+                                        }
+                                ) { Text("Test $count models") }
+                        },
+                        dismissButton = {
+                                TextButton(onClick = { confirmTestAllCount = null }) { Text("Cancel") }
+                        }
+                )
+        }
+}
+
+
+/** Test buttons and the stored result for the selected model. */
+@Composable
+private fun ModelTestSection(
+        result: ModelTestResult?,
+        isTestingSelected: Boolean,
+        isTestingAll: Boolean,
+        hasApiKey: Boolean,
+        onTestSelected: () -> Unit,
+        onTestAll: () -> Unit,
+) {
+        when {
+                isTestingSelected ->
+                        Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(top = 8.dp)
+                        ) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                Text(
+                                        if (isTestingAll) "Testing all models…" else "Testing model…",
+                                        modifier = Modifier.padding(start = 8.dp),
+                                        style = MaterialTheme.typography.bodySmall
+                                )
+                        }
+                result != null ->
+                        Text(
+                                result.description,
+                                modifier = Modifier.padding(top = 8.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color =
+                                        if (result.isFailure) MaterialTheme.colorScheme.error
+                                        else MaterialTheme.colorScheme.primary
+                        )
+                !hasApiKey ->
+                        Text(
+                                "Save an API key to test models.",
+                                modifier = Modifier.padding(top = 8.dp),
+                                style = MaterialTheme.typography.bodySmall
+                        )
+        }
+        Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+                OutlinedButton(
+                        onClick = onTestSelected,
+                        enabled = hasApiKey && !isTestingSelected,
+                        modifier = Modifier.weight(1f)
+                ) { Text("Test model") }
+                OutlinedButton(
+                        onClick = onTestAll,
+                        enabled = hasApiKey && !isTestingAll,
+                        modifier = Modifier.weight(1f)
+                ) { Text(if (isTestingAll) "Testing…" else "Test all models") }
         }
 }
