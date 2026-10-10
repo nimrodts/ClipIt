@@ -22,6 +22,9 @@ interface CouponHistoryDao {
     )
     fun getSpendingByMonth(): Flow<List<MonthlySpending>>
 
+    @Query("DELETE FROM coupon_history WHERE couponId = :couponId AND timestamp >= :since")
+    suspend fun deleteSince(couponId: Long, since: Long)
+
     @Delete suspend fun delete(couponHistory: CouponHistory)
 }
 

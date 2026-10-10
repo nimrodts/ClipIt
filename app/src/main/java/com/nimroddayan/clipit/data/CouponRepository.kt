@@ -147,6 +147,15 @@ class CouponRepository(
         couponDao.update(updatedCoupon)
     }
 
+    /**
+     * Puts [snapshot] back exactly as it was and drops the history written since [since], so an
+     * immediate Undo (archive, redeem, use) leaves no trace.
+     */
+    suspend fun restore(snapshot: Coupon, since: Long) {
+        couponDao.update(snapshot)
+        couponHistoryDao.deleteSince(snapshot.id, since)
+    }
+
     suspend fun undo(operation: CouponHistory) {
         if (operation.action == "Coupon Used") {
             val usedAmount = operation.changeSummary.toDoubleOrNull() ?: 0.0
