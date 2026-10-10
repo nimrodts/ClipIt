@@ -1,22 +1,53 @@
-﻿package com.nimroddayan.clipit.ui.theme
+package com.nimroddayan.clipit.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Nord Theme - Polar Night (Dark)
-val nord0 = Color(0xFF2E3440) // Base
-val nord1 = Color(0xFF3B4252) // Lighter
-val nord3 = Color(0xFF4C566A) // Text/UI
+// Apple-neutral palette: grey grounds with a slight green bias, white cards, one green accent.
+// Semantic warn/critical colors are separate from the accent.
 
-// Nord Theme - Snow Storm (Light)
-val nord4 = Color(0xFFD8DEE9) // Base
-val nord5 = Color(0xFFE5E9F0) // Lighter
-val nord6 = Color(0xFFECEFF4) // UI
+// Light
+val Ground = Color(0xFFF2F2EF)
+val Card = Color(0xFFFFFFFF)
+val Ink = Color(0xFF141615)
+val InkSecondary = Color(0xFF5D6460)
+val InkTertiary = Color(0xFF969D99)
+val Fill = Color(0xFFE9EAE7)
+val FillStrong = Color(0xFFDEDFDB)
+val Hairline = Color(0x17141816)
+val Accent = Color(0xFF128255)
+val AccentSoft = Color(0xFFDCEFE5)
+val OnAccentSoft = Color(0xFF0A4D32)
+val Warn = Color(0xFFA86400)
+val WarnSoft = Color(0xFFF6E7CF)
+val Critical = Color(0xFFCC3426)
+val CriticalSoft = Color(0xFFF8DEDA)
+val Slate = Color(0xFF5C6975)
+val SlateSoft = Color(0xFFE2E6EA)
 
-// Nord Theme - Frost (Accents)
-val nord8 = Color(0xFF88C0D0)
-val nord10 = Color(0xFF5E81AC)
+// Dark
+val GroundDark = Color(0xFF0A0B0A)
+val CardDark = Color(0xFF1A1C1B)
+val SheetDark = Color(0xFF1E201F)
+val RaisedDark = Color(0xFF242726)
+val InkDark = Color(0xFFF1F4F2)
+val InkSecondaryDark = Color(0xFFA2AAA6)
+val InkTertiaryDark = Color(0xFF6A716D)
+val FillDark = Color(0xFF2A2D2C)
+val FillStrongDark = Color(0xFF343736)
+val HairlineDark = Color(0x17FFFFFF)
+val AccentDark = Color(0xFF3CCB8A)
+val OnAccentDark = Color(0xFF03140C)
+val AccentSoftDark = Color(0xFF173A2A)
+val OnAccentSoftDark = Color(0xFFA6EBC8)
+val WarnDark = Color(0xFFF2AB3C)
+val WarnSoftDark = Color(0xFF3A2C14)
+val CriticalDark = Color(0xFFFF6D60)
+val CriticalSoftDark = Color(0xFF3F1C18)
+val SlateDark = Color(0xFF7A8894)
+val SlateSoftDark = Color(0xFF26303A)
 
-// Nord Theme - Aurora
-val nord11 = Color(0xFFBF616A) // Red
-
-
+// The redeem pass stays light in both themes: scanners need dark bars on a light ground.
+val PassBackground = Color(0xFFFFFFFF)
+val PassInk = Color(0xFF141615)
+val PassInkSecondary = Color(0xFF5D6460)
+val PassFill = Color(0xFFEFF0ED)
