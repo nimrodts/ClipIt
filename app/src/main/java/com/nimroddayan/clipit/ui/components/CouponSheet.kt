@@ -135,7 +135,7 @@ fun CouponSheetHeader(
                     Text(
                             "of ${formatMoney(coupon.initialValue, currencySymbol)}",
                             style = MaterialTheme.typography.bodyLarge.tabular,
-                            color = ext.inkTertiary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(bottom = 6.dp)
                     )
                 }
@@ -402,7 +402,7 @@ private fun QuickChip(label: String, onClick: () -> Unit) {
             Modifier.pressScale(interaction, 0.94f)
                     .height(32.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.extendedColors.card)
+                    .background(MaterialTheme.extendedColors.chip)
                     .clickable(interactionSource = interaction, indication = null, onClick = onClick)
                     .padding(horizontal = 12.dp),
             contentAlignment = Alignment.Center
@@ -419,13 +419,13 @@ fun PrimaryButton(label: String, modifier: Modifier = Modifier, enabled: Boolean
                     .fillMaxWidth()
                     .height(50.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 1f else 0.38f))
+                    .background(if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.extendedColors.fillStrong)
                     .clickable(enabled = enabled, interactionSource = interaction, indication = null, onClick = onClick),
             contentAlignment = Alignment.Center
     ) {
         Text(
                 label,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.titleSmall.tabular.copy(fontSize = 17.sp)
         )
     }

@@ -53,6 +53,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
@@ -64,6 +65,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -467,6 +469,8 @@ fun HomeScreen(
                                         .clip(SheetShape)
                                         .background(ext.sheet)
                         ) {
+                          // The sheet sits outside the Scaffold, so nothing else sets its content color.
+                          CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
                             CouponSheetHeader(
                                     coupon = c,
                                     category = categoryOf(c),
@@ -536,6 +540,7 @@ fun HomeScreen(
                                     },
                                     modifier = Modifier.weight(1f)
                             )
+                          }
                         }
                     }
                 }
