@@ -1,41 +1,51 @@
-﻿package com.nimroddayan.clipit.ui.screen
+package com.nimroddayan.clipit.ui.screen
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Category
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material.icons.outlined.Sms
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.nimroddayan.clipit.data.model.Currency
+import com.nimroddayan.clipit.ui.components.GroupDivider
+import com.nimroddayan.clipit.ui.components.GroupRow
+import com.nimroddayan.clipit.ui.components.GroupedList
+import com.nimroddayan.clipit.ui.components.SectionCaption
+import com.nimroddayan.clipit.ui.theme.extendedColors
 import com.nimroddayan.clipit.ui.viewmodel.SettingsViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
         viewModel: SettingsViewModel,
@@ -46,150 +56,114 @@ fun SettingsScreen(
         onNavigateToAiSettings: () -> Unit,
         onNavigateToDatabaseSettings: () -> Unit,
         onManageWhitelist: () -> Unit,
+        bottomPadding: Dp = 0.dp,
 ) {
-        var showCurrencyDialog by remember { mutableStateOf(false) }
+    var showCurrencyDialog by remember { mutableStateOf(false) }
+    val currentCurrency by viewModel.selectedCurrency.collectAsState()
+    val ext = MaterialTheme.extendedColors
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
-        Column(
-                modifier =
-                        Modifier.fillMaxSize()
-                                .background(MaterialTheme.colorScheme.background)
-                                .padding(16.dp)
-        ) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                        "General Settings",
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                ElevatedCard(
-                        elevation = CardDefaults.elevatedCardElevation(2.dp),
+    Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            containerColor = MaterialTheme.colorScheme.background,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            topBar = {
+                LargeTopAppBar(
+                        title = { Text("Settings") },
                         colors =
-                                CardDefaults.elevatedCardColors(
-                                        containerColor = MaterialTheme.colorScheme.surface
-                                )
-                ) {
-                        Column {
-                                SettingsItem(
-                                        icon = Icons.Filled.DarkMode,
-                                        title = "Dark Mode",
-                                        onClick = { onThemeChange(!isDarkTheme) }
-                                ) { Switch(checked = isDarkTheme, onCheckedChange = onThemeChange) }
-                                HorizontalDivider(
-                                        modifier = Modifier.padding(start = 56.dp),
-                                        color =
-                                                MaterialTheme.colorScheme.outlineVariant.copy(
-                                                        alpha = 0.5f
-                                                )
-                                )
-                                SettingsItem(
-                                        icon = Icons.Filled.AttachMoney,
-                                        title = "Currency",
-                                        onClick = { showCurrencyDialog = true }
-                                )
-                                HorizontalDivider(
-                                        modifier = Modifier.padding(start = 56.dp),
-                                        color =
-                                                MaterialTheme.colorScheme.outlineVariant.copy(
-                                                        alpha = 0.5f
-                                                )
-                                )
-                                SettingsItem(
-                                        icon = Icons.Filled.Category,
-                                        title = "Manage Categories",
-                                        onClick = onManageCategories
-                                )
-                                HorizontalDivider(
-                                        modifier = Modifier.padding(start = 56.dp),
-                                        color =
-                                                MaterialTheme.colorScheme.outlineVariant.copy(
-                                                        alpha = 0.5f
-                                                )
-                                )
-                                SettingsItem(
-                                        icon = Icons.Filled.Archive,
-                                        title = "Archived Coupons",
-                                        onClick = onNavigateToArchive
-                                )
-                                HorizontalDivider(
-                                        modifier = Modifier.padding(start = 56.dp),
-                                        color =
-                                                MaterialTheme.colorScheme.outlineVariant.copy(
-                                                        alpha = 0.5f
-                                                )
-                                )
-                                SettingsItem(
-                                        icon = Icons.Filled.SmartToy,
-                                        title = "AI Settings",
-                                        onClick = onNavigateToAiSettings
-                                )
-                                HorizontalDivider(
-                                        modifier = Modifier.padding(start = 56.dp),
-                                        color =
-                                                MaterialTheme.colorScheme.outlineVariant.copy(
-                                                        alpha = 0.5f
-                                                )
-                                )
-                                SettingsItem(
-                                        icon = Icons.Filled.Dns,
-                                        title = "Database",
-                                        onClick = onNavigateToDatabaseSettings
-                                )
-                                HorizontalDivider(
-                                        modifier = Modifier.padding(start = 56.dp),
-                                        color =
-                                                MaterialTheme.colorScheme.outlineVariant.copy(
-                                                        alpha = 0.5f
-                                                )
-                                )
-                                SettingsItem(
-                                        icon = Icons.Filled.SmartToy,
-                                        title = "SMS Extraction Whitelist",
-                                        onClick = onManageWhitelist
-                                )
-                        }
-                }
-        }
-
-        if (showCurrencyDialog) {
-                val currentCurrency by viewModel.selectedCurrency.collectAsState()
-                CurrencySelectionDialog(
-                        currentCurrencyCode = currentCurrency,
-                        onCurrencySelected = { viewModel.saveSelectedCurrency(it.code) },
-                        onDismiss = { showCurrencyDialog = false }
+                                TopAppBarDefaults.largeTopAppBarColors(
+                                        containerColor = MaterialTheme.colorScheme.background,
+                                        scrolledContainerColor = ext.bar
+                                ),
+                        scrollBehavior = scrollBehavior
                 )
+            }
+    ) { padding ->
+        LazyColumn(
+                contentPadding =
+                        PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = padding.calculateTopPadding() + 4.dp,
+                                bottom = bottomPadding + 24.dp
+                        ),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxSize()
+        ) {
+            item {
+                SectionCaption("Appearance")
+            }
+            item {
+                GroupedList {
+                    GroupRow(onClick = { onThemeChange(!isDarkTheme) }) {
+                        RowIcon(Icons.Outlined.DarkMode)
+                        Text("Dark mode", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        Switch(
+                                checked = isDarkTheme,
+                                onCheckedChange = onThemeChange,
+                                colors =
+                                        SwitchDefaults.colors(
+                                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                                checkedThumbColor = Color.White,
+                                                uncheckedTrackColor = ext.fillStrong,
+                                                uncheckedThumbColor = Color.White,
+                                                uncheckedBorderColor = Color.Transparent,
+                                        )
+                        )
+                    }
+                    GroupDivider()
+                    NavRow(Icons.Outlined.Payments, "Currency", Currency.fromCode(currentCurrency).let { "${it.symbol} ${it.code}" }) {
+                        showCurrencyDialog = true
+                    }
+                }
+            }
+            item { SectionCaption("Coupons", Modifier.padding(top = 14.dp)) }
+            item {
+                GroupedList {
+                    NavRow(Icons.Outlined.Category, "Categories", onClick = onManageCategories)
+                    GroupDivider()
+                    NavRow(Icons.Outlined.Archive, "Archived coupons", onClick = onNavigateToArchive)
+                }
+            }
+            item { SectionCaption("SMS import", Modifier.padding(top = 14.dp)) }
+            item {
+                GroupedList {
+                    NavRow(Icons.Outlined.AutoAwesome, "AI coupon detection", onClick = onNavigateToAiSettings)
+                    GroupDivider()
+                    NavRow(Icons.Outlined.Sms, "Trusted senders", onClick = onManageWhitelist)
+                }
+            }
+            item { SectionCaption("Data", Modifier.padding(top = 14.dp)) }
+            item {
+                GroupedList {
+                    NavRow(Icons.Outlined.Storage, "Backup & database", onClick = onNavigateToDatabaseSettings)
+                }
+            }
         }
+    }
+
+    if (showCurrencyDialog) {
+        CurrencySelectionDialog(
+                currentCurrencyCode = currentCurrency,
+                onCurrencySelected = { viewModel.saveSelectedCurrency(it.code) },
+                onDismiss = { showCurrencyDialog = false }
+        )
+    }
 }
 
 @Composable
-private fun SettingsItem(
-        icon: ImageVector,
-        title: String,
-        onClick: () -> Unit,
-        content: @Composable (() -> Unit)? = null
-) {
-        Row(
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-        ) {
-                Icon(
-                        imageVector = icon,
-                        contentDescription = title,
-                        tint = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                        text = title,
-                        modifier = Modifier.padding(start = 16.dp).weight(1f),
-                        color = MaterialTheme.colorScheme.onSurface
-                )
-                if (content == null) {
-                        Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                        )
-                } else {
-                        content()
-                }
+private fun RowIcon(icon: ImageVector) {
+    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun NavRow(icon: ImageVector, title: String, value: String? = null, onClick: () -> Unit) {
+    GroupRow(onClick = onClick) {
+        RowIcon(icon)
+        Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        if (value != null) {
+            Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = MaterialTheme.extendedColors.inkTertiary)
+    }
 }

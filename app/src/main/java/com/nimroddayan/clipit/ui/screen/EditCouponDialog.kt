@@ -1,5 +1,12 @@
 package com.nimroddayan.clipit.ui.screen
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import com.nimroddayan.clipit.ui.theme.extendedColors
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,6 +54,7 @@ import androidx.compose.ui.window.Dialog
 import com.nimroddayan.clipit.data.model.Coupon
 import com.nimroddayan.clipit.ui.viewmodel.CategoryViewModel
 import com.nimroddayan.clipit.ui.viewmodel.CouponViewModel
+import com.nimroddayan.clipit.util.parseAmount
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -69,10 +77,8 @@ fun EditCouponDialog(
         var redemptionUrl by remember { mutableStateOf(coupon.redemptionUrl) }
         var isOneTime by remember { mutableStateOf(coupon.isOneTime) }
         var expanded by remember { mutableStateOf(false) }
-        var selectedCategory by
-                remember(coupon, categories) {
-                        mutableStateOf(categories.find { it.id == coupon.categoryId })
-                }
+        var selectedCategoryId by remember { mutableStateOf(coupon.categoryId) }
+        val selectedCategory = categories.find { it.id == selectedCategoryId }
         var showDatePicker by remember { mutableStateOf(false) }
         // DatePicker only supports years 1900-2100. Check if the date is within range.
         val validExpirationDate =
@@ -86,27 +92,18 @@ fun EditCouponDialog(
         val datePickerState =
                 rememberDatePickerState(initialSelectedDateMillis = validExpirationDate)
 
-        Dialog(onDismissRequest = onDismiss) {
-                ElevatedCard(
-                        shape = MaterialTheme.shapes.extraLarge,
-                        colors =
-                                CardDefaults.elevatedCardColors(
-                                        containerColor = MaterialTheme.colorScheme.surface
-                                ),
-                        elevation = CardDefaults.elevatedCardElevation(6.dp)
-                ) {
+        ModalBottomSheet(
+                onDismissRequest = onDismiss,
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                containerColor = MaterialTheme.extendedColors.sheet,
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        ) {
+                Box(Modifier.verticalScroll(rememberScrollState()).imePadding()) {
                         Column(
-                                modifier = Modifier.padding(24.dp),
+                                modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 32.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                                Icon(
-                                        Icons.Default.Edit,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(48.dp)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text("Edit Coupon", style = MaterialTheme.typography.headlineSmall)
+                                Text("Edit coupon", style = MaterialTheme.typography.headlineSmall)
                                 Spacer(modifier = Modifier.height(24.dp))
 
                                 OutlinedTextField(
@@ -263,7 +260,7 @@ fun EditCouponDialog(
                                         OutlinedTextField(
                                                 modifier = Modifier.menuAnchor().fillMaxWidth(),
                                                 readOnly = true,
-                                                value = selectedCategory?.name ?: "",
+                                                value = selectedCategory?.name ?: "None",
                                                 onValueChange = {},
                                                 label = { Text("Category") },
                                                 leadingIcon = {
@@ -282,11 +279,21 @@ fun EditCouponDialog(
                                                 expanded = expanded,
                                                 onDismissRequest = { expanded = false },
                                         ) {
+                                                DropdownMenuItem(
+                                                        text = { Text("None") },
+                                                        onClick = {
+                                                                selectedCategoryId = null
+                                                                expanded = false
+                                                        },
+                                                        contentPadding =
+                                                                ExposedDropdownMenuDefaults
+                                                                        .ItemContentPadding,
+                                                )
                                                 categories.forEach { category ->
                                                         DropdownMenuItem(
                                                                 text = { Text(category.name) },
                                                                 onClick = {
-                                                                        selectedCategory = category
+                                                                        selectedCategoryId = category.id
                                                                         expanded = false
                                                                 },
                                                                 contentPadding =
@@ -296,48 +303,53 @@ fun EditCouponDialog(
                                                 }
                                         }
                                 }
-
+                                val initialAmount = if (isOneTime) 1.0 else parseAmount(value)
+                                val currentAmount = if (isOneTime) 1.0 else parseAmount(currentValue)
+                                val error =
+                                        when {
+                                                name.isBlank() -> "Give the coupon a name."
+                                                initialAmount == null || initialAmount <= 0 ->
+                                                        "Initial value must be a number above zero."
+                                                currentAmount == null || currentAmount < 0 ->
+                                                        "Current value must be a number."
+                                                currentAmount > initialAmount + 1e-9 ->
+                                                        "Current value can’t be more than the initial value."
+                                                expiration == null -> "Pick an expiration date."
+                                                else -> null
+                                        }
+                                if (error != null) {
+                                        Text(
+                                                error,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+                                        )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
                                 Button(
                                         onClick = {
-                                                expiration?.let { exp ->
-                                                        selectedCategory?.let { category ->
-                                                                val updatedCoupon =
-                                                                        coupon.copy(
-                                                                                name = name,
-                                                                                initialValue =
-                                                                                        if (isOneTime
-                                                                                        )
-                                                                                                1.0
-                                                                                        else
-                                                                                                value.toDouble(),
-                                                                                currentValue =
-                                                                                        if (isOneTime
-                                                                                        )
-                                                                                                1.0
-                                                                                        else
-                                                                                                currentValue
-                                                                                                        .toDouble(),
-                                                                                expirationDate =
-                                                                                        exp,
-                                                                                categoryId =
-                                                                                        category.id,
-                                                                                redeemCode =
-                                                                                        redeemCode,
-                                                                                redemptionUrl =
-                                                                                        redemptionUrl,
-                                                                                isOneTime =
-                                                                                        isOneTime,
-                                                                                isPending = false
-                                                                        )
-                                                                couponViewModel.update(
-                                                                        updatedCoupon
+                                                val exp = expiration
+                                                if (error == null && exp != null &&
+                                                                initialAmount != null && currentAmount != null
+                                                ) {
+                                                        couponViewModel.update(
+                                                                coupon.copy(
+                                                                        name = name.trim(),
+                                                                        initialValue = initialAmount,
+                                                                        currentValue = currentAmount,
+                                                                        expirationDate = exp,
+                                                                        categoryId = selectedCategoryId,
+                                                                        redeemCode = redeemCode,
+                                                                        redemptionUrl = redemptionUrl,
+                                                                        isOneTime = isOneTime,
+                                                                        isPending = false
                                                                 )
-                                                        }
+                                                        )
+                                                        onDismiss()
                                                 }
-                                                onDismiss()
                                         },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        enabled = selectedCategory != null && expiration != null
+                                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                                        enabled = error == null
                                 ) { Text("Save") }
                         }
                 }

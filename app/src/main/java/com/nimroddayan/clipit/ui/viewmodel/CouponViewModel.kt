@@ -10,9 +10,12 @@ import com.nimroddayan.clipit.data.ai.CouponParser
 import com.nimroddayan.clipit.data.gemini.ParsedCoupon
 import com.nimroddayan.clipit.data.model.Coupon
 import com.nimroddayan.clipit.data.model.SortOption
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -130,6 +133,34 @@ class CouponViewModel(
         viewModelScope.launch { couponRepository.use(coupon, amount) }
     }
 
+    private val _undoableChanges = MutableSharedFlow<UndoableChange>(extraBufferCapacity = 4)
+    /** Changes the Home screen offers to take back from its snackbar. */
+    val undoableChanges: SharedFlow<UndoableChange> = _undoableChanges.asSharedFlow()
+
+    fun archiveUndoable(coupon: Coupon) =
+            changeUndoable(coupon, "Archived ${coupon.name}") { couponRepository.archive(coupon) }
+
+    fun redeemOneTimeUndoable(coupon: Coupon) =
+            changeUndoable(coupon, "Redeemed ${coupon.name}") {
+                couponRepository.use(coupon, coupon.currentValue)
+                couponRepository.archive(coupon.copy(currentValue = 0.0))
+            }
+
+    fun useUndoable(coupon: Coupon, amount: Double, message: String) =
+            changeUndoable(coupon, message) { couponRepository.use(coupon, amount) }
+
+    fun undo(change: UndoableChange) {
+        viewModelScope.launch { couponRepository.restore(change.snapshot, change.since) }
+    }
+
+    private fun changeUndoable(coupon: Coupon, message: String, block: suspend () -> Unit) {
+        val since = System.currentTimeMillis()
+        viewModelScope.launch {
+            block()
+            _undoableChanges.emit(UndoableChange(message, coupon, since))
+        }
+    }
+
     fun redeemOneTime(coupon: Coupon) {
         viewModelScope.launch {
             couponRepository.use(coupon, coupon.currentValue)
@@ -162,3 +193,6 @@ class CouponViewModel(
         _error.value = null
     }
 }
+
+/** A change that can be reverted by writing [snapshot] back and dropping history since [since]. */
+data class UndoableChange(val message: String, val snapshot: Coupon, val since: Long)

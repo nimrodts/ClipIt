@@ -292,4 +292,53 @@ class CouponRepositoryTest {
         assertNotNull(useEntry)
         assertEquals("40.0", useEntry?.changeSummary) // 100 - 60 = 40
     }
+
+    // ========== Restore (snackbar Undo) Tests ==========
+
+    @Test
+    fun restore_afterArchive_bringsCouponBackAndRemovesArchiveHistory() = runTest {
+        repository.insert(createTestCoupon())
+        val coupon = couponDao.getAll().first().single()
+        Thread.sleep(5) // keep the creation entry strictly before `since`
+        val since = System.currentTimeMillis()
+
+        repository.archive(coupon)
+        repository.restore(coupon, since)
+
+        val active = couponDao.getAll().first()
+        assertEquals(1, active.size)
+        val history = couponHistoryDao.getHistoryForCoupon(coupon.id).first()
+        assertTrue(history.none { it.action == "Coupon Archived" })
+        assertEquals(listOf("Coupon Created"), history.map { it.action })
+    }
+
+    @Test
+    fun restore_afterUse_restoresBalanceAndRemovesUseHistory() = runTest {
+        repository.insert(createTestCoupon(currentValue = 100.0))
+        val coupon = couponDao.getAll().first().single()
+        Thread.sleep(5) // keep the creation entry strictly before `since`
+        val since = System.currentTimeMillis()
+
+        repository.use(coupon, 40.0)
+        repository.restore(coupon, since)
+
+        assertEquals(100.0, couponDao.getCouponById(coupon.id)!!.currentValue, 0.001)
+        val history = couponHistoryDao.getHistoryForCoupon(coupon.id).first()
+        assertTrue(history.none { it.action == "Coupon Used" })
+    }
+
+    @Test
+    fun restore_afterFullUse_unarchivesCoupon() = runTest {
+        repository.insert(createTestCoupon(currentValue = 50.0, initialValue = 50.0))
+        val coupon = couponDao.getAll().first().single()
+        Thread.sleep(5) // keep the creation entry strictly before `since`
+        val since = System.currentTimeMillis()
+
+        repository.use(coupon, 50.0) // fully used -> auto-archived
+        assertTrue(couponDao.getAll().first().isEmpty())
+
+        repository.restore(coupon, since)
+
+        assertEquals(50.0, couponDao.getAll().first().single().currentValue, 0.001)
+    }
 }
