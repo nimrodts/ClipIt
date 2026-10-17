@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed-icon layer: the system tints it with one color, so detail is cut out of the front pass
+     instead of drawn on it. Also the notification small icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Back pass, faded and kept out from under the front one so the cut-outs stay clean. -->
+    <group>
+        <clip-path android:pathData="M0,0 H108 V47 H33 V108 H0 Z" />
+        <group
+            android:pivotX="54"
+            android:pivotY="54"
+            android:rotation="-10">
+            <path
+                android:fillAlpha="0.55"
+                android:fillColor="#FFFFFF"
+                android:pathData="M36,33 H70 A5,5 0 0 1 75,38 V42.5 A4,4 0 0 0 75,50.5 V55 A5,5 0 0 1 70,60 H36 A5,5 0 0 1 31,55 V50.5 A4,4 0 0 0 31,42.5 V38 A5,5 0 0 1 36,33 Z" />
+        </group>
+    </group>
+    <!-- Front pass with the lines and perforation punched out. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M38,47 H72 A5,5 0 0 1 77,52 V56.5 A4,4 0 0 0 77,64.5 V69 A5,5 0 0 1 72,74 H38 A5,5 0 0 1 33,69 V64.5 A4,4 0 0 0 33,56.5 V52 A5,5 0 0 1 38,47 Z M41,55 H54 A2,2 0 0 1 54,59 H41 A2,2 0 0 1 41,55 Z M41,63 H48 A2,2 0 0 1 48,67 H41 A2,2 0 0 1 41,63 Z M64.9,51 a1.1,1.1 0 1 1 2.2,0 a1.1,1.1 0 1 1 -2.2,0 Z M64.9,55.5 a1.1,1.1 0 1 1 2.2,0 a1.1,1.1 0 1 1 -2.2,0 Z M64.9,60 a1.1,1.1 0 1 1 2.2,0 a1.1,1.1 0 1 1 -2.2,0 Z M64.9,64.5 a1.1,1.1 0 1 1 2.2,0 a1.1,1.1 0 1 1 -2.2,0 Z M64.9,69 a1.1,1.1 0 1 1 2.2,0 a1.1,1.1 0 1 1 -2.2,0 Z" />
+</vector>
