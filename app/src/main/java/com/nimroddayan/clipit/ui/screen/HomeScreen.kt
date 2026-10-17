@@ -37,6 +37,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -68,6 +69,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -79,23 +81,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.nimroddayan.clipit.data.model.Category
 import com.nimroddayan.clipit.data.model.Coupon
@@ -125,6 +132,8 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 private val SheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+private val FabSize = 56.dp
+private val FabMargin = 16.dp
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 private val SheetBoundsTransform = BoundsTransform { _, _ ->
@@ -241,8 +250,11 @@ fun HomeScreen(
 
     val dragY = remember { Animatable(0f) }
     var sheetHeightPx by remember { mutableFloatStateOf(1f) }
-    val openProgress by animateFloatAsState(if (sheetOpen) 1f else 0f, Motion.sheet(), label = "sheetDepth")
-    val depth = openProgress * (1f - (dragY.value / sheetHeightPx).coerceIn(0f, 1f))
+    val openProgress = animateFloatAsState(if (sheetOpen) 1f else 0f, Motion.sheet(), label = "sheetDepth")
+    // Read only inside graphicsLayer blocks: reading it during composition would recompose the
+    // whole screen on every frame of the sheet's open, close and drag.
+    fun depth() = openProgress.value * (1f - (dragY.value / sheetHeightPx).coerceIn(0f, 1f))
+    val showScrim by remember { derivedStateOf { depth() > 0.001f } }
 
     fun openSheet(c: Coupon, use: Boolean = false) {
         focusManager.clearFocus()
@@ -254,11 +266,69 @@ fun HomeScreen(
         focusManager.clearFocus()
         selectedId = null
     }
+    // Release of a sheet drag at [offset] px with [velocity] px/s: dismiss, or spring back.
+    fun settleSheet(offset: Float, velocity: Float) {
+        val projected = offset + projectedDistance(velocity)
+        if (projected > sheetHeightPx * 0.28f && velocity > -100f) {
+            closeSheet()
+        } else {
+            scope.launch { dragY.animateTo(0f, Motion.momentum(0.3f), velocity) }
+        }
+    }
+    // Pulling the body down past its top drags the whole sheet, the same as the header does.
+    val sheetBodyDrag = remember {
+        object : NestedScrollConnection {
+            var pulled = 0f
+
+            fun moveTo(next: Float) {
+                pulled = next
+                scope.launch { dragY.snapTo(next) }
+            }
+
+            // Pulled down, then back up: lift the sheet before the body starts scrolling.
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (pulled <= 0f || available.y >= 0f) return Offset.Zero
+                val take = maxOf(available.y, -pulled)
+                moveTo(pulled + take)
+                return Offset(0f, take)
+            }
+
+            // Whatever downward drag the body couldn't use (it is at the top) moves the sheet.
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (source != NestedScrollSource.UserInput || available.y <= 0f) return Offset.Zero
+                if (pulled == 0f) pulled = dragY.value // grab a sheet that is still springing back
+                moveTo(pulled + available.y)
+                return Offset(0f, available.y)
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (pulled <= 0f) return Velocity.Zero
+                val from = pulled
+                pulled = 0f
+                settleSheet(from, available.y)
+                return available
+            }
+        }
+    }
     BackHandler(enabled = sheetOpen) { closeSheet() }
 
     val listState = rememberLazyListState()
     LaunchedEffect(listState.isScrollInProgress) { if (listState.isScrollInProgress) focusManager.clearFocus() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+
+    // The add button steps out of the way while reading down the list and returns on any scroll up.
+    var fabShown by remember { mutableStateOf(true) }
+    val fabScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < -1f) fabShown = false else if (available.y > 1f) fabShown = true
+                return Offset.Zero
+            }
+        }
+    }
+    val listAtTop by remember { derivedStateOf { !listState.canScrollBackward } }
+    val fabVisible = (fabShown || listAtTop) && !sheetOpen
+    var snackbarHeightPx by remember { mutableFloatStateOf(0f) }
 
     SharedTransitionLayout(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize()) {
@@ -266,6 +336,7 @@ fun HomeScreen(
                     modifier =
                             Modifier.graphicsLayer {
                                         // Dim to focus: push the list back while the sheet is up.
+                                        val depth = depth()
                                         val s = 1f - 0.055f * depth
                                         scaleX = s
                                         scaleY = s
@@ -274,6 +345,7 @@ fun HomeScreen(
                                             shape = RoundedCornerShape((24 * depth).dp)
                                         }
                                     }
+                                    .nestedScroll(fabScroll)
                                     .nestedScroll(scrollBehavior.nestedScrollConnection)
                                     .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) },
                     containerColor = MaterialTheme.colorScheme.background,
@@ -296,9 +368,6 @@ fun HomeScreen(
                                                 onDismiss = { showSortMenu = false }
                                         )
                                     }
-                                    IconButton(onClick = onAddCoupon) {
-                                        Icon(Icons.Filled.Add, contentDescription = "Add coupon", tint = MaterialTheme.colorScheme.primary)
-                                    }
                                 },
                                 colors =
                                         TopAppBarDefaults.largeTopAppBarColors(
@@ -316,7 +385,8 @@ fun HomeScreen(
                                         start = 16.dp,
                                         end = 16.dp,
                                         top = innerPadding.calculateTopPadding() + 4.dp,
-                                        bottom = bottomPadding + 24.dp
+                                        // Room for the add button, so it never covers the last card.
+                                        bottom = bottomPadding + FabSize + FabMargin + 24.dp
                                 ),
                         modifier = Modifier.fillMaxSize()
                 ) {
@@ -435,11 +505,45 @@ fun HomeScreen(
                 }
             }
 
+            // Add button: floats above the tab bar, rises over a snackbar, slides under the bar to hide.
+            val fabHidden = animateFloatAsState(if (fabVisible) 0f else 1f, Motion.standard(0.3f), label = "fabHidden")
+            val fabLift = animateFloatAsState(snackbarHeightPx, Motion.standard(0.3f), label = "fabLift")
+            val fabInteraction = remember { MutableInteractionSource() }
+            Box(
+                    Modifier.align(Alignment.BottomEnd)
+                            .padding(end = 20.dp, bottom = bottomPadding + FabMargin)
+                            .graphicsLayer {
+                                val hidden = fabHidden.value
+                                translationY = hidden * (size.height + (bottomPadding + FabMargin).toPx()) - fabLift.value
+                                alpha = 1f - hidden
+                            }
+                            .pressScale(fabInteraction, 0.92f)
+                            .shadow(10.dp, CircleShape, ambientColor = Color.Black, spotColor = Color.Black)
+                            .size(FabSize)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                            .clickable(
+                                    interactionSource = fabInteraction,
+                                    indication = null,
+                                    enabled = fabVisible,
+                                    role = Role.Button,
+                                    onClick = onAddCoupon
+                            ),
+                    contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                        Icons.Filled.Add,
+                        contentDescription = "Add coupon",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(28.dp)
+                )
+            }
+
             // Scrim
-            if (depth > 0.001f) {
+            if (showScrim) {
                 Box(
                         Modifier.fillMaxSize()
-                                .graphicsLayer { alpha = depth }
+                                .graphicsLayer { alpha = depth() }
                                 .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f))
                                 .pointerInput(Unit) { detectTapGestures { closeSheet() } }
                 )
@@ -468,6 +572,7 @@ fun HomeScreen(
                                         )
                                         .clip(SheetShape)
                                         .background(ext.sheet)
+                                        .nestedScroll(sheetBodyDrag)
                         ) {
                           // The sheet sits outside the Scaffold, so nothing else sets its content color.
                           CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
@@ -495,15 +600,7 @@ fun HomeScreen(
                                                             val next = if (raw < 0f) -rubberband(-raw, sheetHeightPx) else raw
                                                             scope.launch { dragY.snapTo(next) }
                                                         },
-                                                        onDragEnd = {
-                                                            val v = tracker.calculateVelocity().y
-                                                            val projected = dragY.value + projectedDistance(v)
-                                                            if (projected > sheetHeightPx * 0.28f && v > -100f) {
-                                                                closeSheet()
-                                                            } else {
-                                                                scope.launch { dragY.animateTo(0f, Motion.momentum(0.3f), v) }
-                                                            }
-                                                        },
+                                                        onDragEnd = { settleSheet(dragY.value, tracker.calculateVelocity().y) },
                                                         onDragCancel = { scope.launch { dragY.animateTo(0f, Motion.standard(0.3f)) } }
                                                 )
                                             }
@@ -552,6 +649,8 @@ fun HomeScreen(
                             Modifier.align(Alignment.BottomCenter)
                                     .then(if (sheetOpen) Modifier.navigationBarsPadding() else Modifier.padding(bottom = bottomPadding))
                                     .padding(horizontal = 12.dp, vertical = 10.dp)
+                                    // Empty host measures 0; a shown snackbar lifts the add button by its height.
+                                    .onSizeChanged { snackbarHeightPx = it.height.toFloat() }
             ) { data ->
                 Snackbar(
                         snackbarData = data,

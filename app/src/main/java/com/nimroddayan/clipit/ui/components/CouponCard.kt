@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -291,14 +292,16 @@ fun SwipeableCouponCard(
     }
 
     Box(modifier.fillMaxWidth().onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) }) {
-        val x = offset.value
-        if (x != 0f) {
-            val toRight = x > 0
-            val revealAlpha = (abs(x) / with(density) { 40.dp.toPx() }).coerceIn(0f, 1f)
+        // Only the swipe direction recomposes; the offset itself is read in the draw layer, so a
+        // swipe doesn't rebuild the card every frame.
+        val direction by remember { derivedStateOf { sign(offset.value) } }
+        if (direction != 0f) {
+            val toRight = direction > 0
+            val revealPx = with(density) { 40.dp.toPx() }
             Row(
                     modifier =
                             Modifier.matchParentSize()
-                                    .graphicsLayer { alpha = revealAlpha }
+                                    .graphicsLayer { alpha = (abs(offset.value) / revealPx).coerceIn(0f, 1f) }
                                     .clip(CouponCardShape)
                                     .background(if (toRight) MaterialTheme.colorScheme.primary else ext.archive)
                                     .padding(horizontal = 22.dp),
@@ -329,39 +332,10 @@ fun SwipeableCouponCard(
         }
 
         Box(
-                Modifier.graphicsLayer {
-                            translationX = offset.value
-                            scaleX = scale
-                            scaleY = scale
-                        }
-                        .then(cardModifier)
-                        .clip(CouponCardShape)
-                        .background(ext.card)
-                        .semantics(mergeDescendants = true) {
-                            role = Role.Button
-                            onClick(label = "Open details") {
-                                currentOnClick()
-                                true
-                            }
-                            onLongClick(label = "Show redeem code") {
-                                currentOnLongPress()
-                                true
-                            }
-                            customActions =
-                                    listOf(
-                                            CustomAccessibilityAction(
-                                                    if (coupon.isOneTime) "Redeem" else "Use"
-                                            ) {
-                                                if (currentCoupon.isOneTime) currentOnRedeem() else currentOnUse()
-                                                true
-                                            },
-                                            CustomAccessibilityAction("Archive") {
-                                                currentOnArchive()
-                                                true
-                                            },
-                                    )
-                        }
-                        .pointerInput(coupon.id) {
+                // Ahead of graphicsLayer, so the finger is measured against the card's resting place.
+                // Measured against the moving card, each frame's offset fed back into the next and
+                // the card shook.
+                Modifier.pointerInput(coupon.id) {
                             val slop = viewConfiguration.touchSlop
                             awaitEachGesture {
                                 val down = awaitFirstDown(requireUnconsumed = false)
@@ -463,6 +437,38 @@ fun SwipeableCouponCard(
                                     mode == GestureMode.Swipe -> settle(releaseVelocity)
                                 }
                             }
+                        }
+                        .graphicsLayer {
+                            translationX = offset.value
+                            scaleX = scale
+                            scaleY = scale
+                        }
+                        .then(cardModifier)
+                        .clip(CouponCardShape)
+                        .background(ext.card)
+                        .semantics(mergeDescendants = true) {
+                            role = Role.Button
+                            onClick(label = "Open details") {
+                                currentOnClick()
+                                true
+                            }
+                            onLongClick(label = "Show redeem code") {
+                                currentOnLongPress()
+                                true
+                            }
+                            customActions =
+                                    listOf(
+                                            CustomAccessibilityAction(
+                                                    if (coupon.isOneTime) "Redeem" else "Use"
+                                            ) {
+                                                if (currentCoupon.isOneTime) currentOnRedeem() else currentOnUse()
+                                                true
+                                            },
+                                            CustomAccessibilityAction("Archive") {
+                                                currentOnArchive()
+                                                true
+                                            },
+                                    )
                         }
         ) {
             CouponCardContent(coupon, category, currencySymbol)

@@ -422,12 +422,15 @@ fun MainScaffold(
 private val TabBarHeight = 58.dp
 
 // Push/pop: the new screen slides over while the old one drifts back a quarter, on one spring.
-private val PushEnter = slideInHorizontally(Motion.standard(0.4f)) { it }
+// A full-width slide is a long distance for a critically damped spring, so it needs a shorter
+// response than in-place motion; at 0.4 s its tail crept on visibly and read as slow motion.
+private const val PushResponse = 0.3f
+private val PushEnter = slideInHorizontally(Motion.standard(PushResponse)) { it }
 private val PushExit =
-        slideOutHorizontally(Motion.standard(0.4f)) { -it / 4 } + fadeOut(Motion.standard(0.4f), 0.6f)
+        slideOutHorizontally(Motion.standard(PushResponse)) { -it / 4 } + fadeOut(Motion.standard(PushResponse), 0.6f)
 private val PopEnter =
-        slideInHorizontally(Motion.standard(0.4f)) { -it / 4 } + fadeIn(Motion.standard(0.4f), 0.6f)
-private val PopExit = slideOutHorizontally(Motion.standard(0.4f)) { it }
+        slideInHorizontally(Motion.standard(PushResponse)) { -it / 4 } + fadeIn(Motion.standard(PushResponse), 0.6f)
+private val PopExit = slideOutHorizontally(Motion.standard(PushResponse)) { it }
 
 /** Translucent tab bar; content scrolls under it. Tabs give feedback on touch-down. */
 @Composable

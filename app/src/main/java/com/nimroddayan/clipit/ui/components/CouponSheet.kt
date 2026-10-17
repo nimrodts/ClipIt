@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,14 +62,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -278,12 +285,7 @@ fun CouponSheetBody(
                     }
                 }
                 AnimatedVisibility(expanded, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
-                    Text(
-                            message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 52.dp, end = 16.dp, bottom = 14.dp)
-                    )
+                    OriginalMessage(message, Modifier.padding(start = 52.dp, end = 16.dp, bottom = 14.dp))
                 }
             }
             GroupDivider()
@@ -316,6 +318,84 @@ fun CouponSheetBody(
         }
     }
 }
+
+/** The SMS or pasted text the coupon came from: links open on tap, a long press copies it all. */
+@Composable
+private fun OriginalMessage(message: String, modifier: Modifier = Modifier) {
+    val haptics = rememberHaptics()
+    val clipboard = LocalClipboardManager.current
+    val uriHandler = LocalUriHandler.current
+    var copied by remember { mutableStateOf(false) }
+    LaunchedEffect(copied) {
+        if (copied) {
+            delay(1600)
+            copied = false
+        }
+    }
+    // A long press that started on a link copies the message; lifting the finger must not also open it.
+    var suppressLinkClick by remember { mutableStateOf(false) }
+    val linkStyles =
+            TextLinkStyles(SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline))
+    val text =
+            remember(message, linkStyles) {
+                linkify(message, linkStyles) { url ->
+                    if (!suppressLinkClick) runCatching { uriHandler.openUri(url) }
+                }
+            }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+                text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier =
+                        Modifier.pointerInput(message) {
+                            detectTapGestures(
+                                    onPress = { suppressLinkClick = false },
+                                    onLongPress = {
+                                        suppressLinkClick = true
+                                        clipboard.setText(AnnotatedString(message))
+                                        copied = true
+                                        haptics.confirm()
+                                    }
+                            )
+                        }
+        )
+        Text(
+                if (copied) "Message copied" else "Long-press to copy",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (copied) MaterialTheme.colorScheme.primary else MaterialTheme.extendedColors.inkTertiary,
+                fontWeight = if (copied) FontWeight.SemiBold else FontWeight.Normal
+        )
+    }
+}
+
+/**
+ * Web addresses in Latin characters only: `https://…`, `www.…`, or a bare domain such as `bit.ly/x`.
+ * Android's Patterns.WEB_URL also accepts non-Latin domains, so ordinary Hebrew text like
+ * "שרכשתם.מימוש" came out as a link. Not preceded by `@`, so email addresses stay plain.
+ * Character classes are spelled out because on Android `\w` and `\d` also match Hebrew letters and digits.
+ */
+private val WebAddress =
+        Regex(
+                """(?<![@A-Za-z0-9_.-])""" +
+                        """(?:https?://[A-Za-z0-9\-._]+|www\.[A-Za-z0-9\-._]+|(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,24})""" +
+                        """(?::[0-9]+)?(?:/[A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]*)?""",
+                RegexOption.IGNORE_CASE
+        )
+
+/** Marks every web address in [text] as a link; bare domains get https://. */
+private fun linkify(text: String, styles: TextLinkStyles, onOpen: (String) -> Unit): AnnotatedString =
+        buildAnnotatedString {
+            append(text)
+            for (match in WebAddress.findAll(text)) {
+                // Sentence punctuation right after an address isn't part of it.
+                val raw = match.value.trimEnd('.', ',', ';', ':', '!', '?', ')', '\'')
+                val url =
+                        if (raw.startsWith("http://", ignoreCase = true) || raw.startsWith("https://", ignoreCase = true)) raw
+                        else "https://$raw"
+                addLink(LinkAnnotation.Url(url, styles) { onOpen(url) }, match.range.first, match.range.first + raw.length)
+            }
+        }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
