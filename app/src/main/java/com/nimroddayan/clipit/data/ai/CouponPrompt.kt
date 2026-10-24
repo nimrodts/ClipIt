@@ -11,7 +11,18 @@ import kotlinx.serialization.json.putJsonObject
 
 object CouponPrompt {
 
-    fun systemInstruction(today: LocalDate): String = """
+    fun systemInstruction(today: LocalDate, categories: List<String> = emptyList()): String =
+        if (categories.isEmpty()) baseInstruction(today) else baseInstruction(today) + "\n" + categoryRule(categories)
+
+
+    private fun categoryRule(categories: List<String>): String = """
+        6. category: pick the one category from this list that best fits the coupon: ${categories.joinToString { "\"$it\"" }}.
+           The store is usually the strongest hint, but follow what the message says the coupon is for.
+           Use the name exactly as listed. Use null if none clearly fits; never invent a category.
+    """.trimIndent()
+
+
+    private fun baseInstruction(today: LocalDate): String = """
         You are an expert data extractor for coupons and gift cards.
         Today's date is $today.
 
@@ -46,7 +57,8 @@ object CouponPrompt {
 
     fun userMessage(text: String): String = "Extract the coupon from this message:\n<message>\n$text\n</message>"
 
-    val RESPONSE_SCHEMA: JsonObject = buildJsonObject {
+    /** The schema constrains `category` to [categories], so the model can't answer with a name the app lacks. */
+    fun responseSchema(categories: List<String> = emptyList()): JsonObject = buildJsonObject {
         put("type", "OBJECT")
         putJsonObject("properties") {
             property("storeName", "STRING", "Brand or store name", nullable = false)
@@ -55,16 +67,29 @@ object CouponPrompt {
             property("expirationDate", "STRING", "Expiration date as YYYY-MM-DD")
             property("description", "STRING", "Short one-line summary")
             property("redemptionUrl", "STRING", "Redemption link starting with http:// or https://")
+            if (categories.isNotEmpty()) {
+                property("category", "STRING", "Best fitting category from the list, or null") {
+                    put("format", "enum")
+                    putJsonArray("enum") { categories.forEach { add(it) } }
+                }
+            }
         }
         putJsonArray("required") { add("storeName") }
     }
 
 
-    private fun JsonObjectBuilder.property(name: String, type: String, description: String, nullable: Boolean = true) {
+    private fun JsonObjectBuilder.property(
+        name: String,
+        type: String,
+        description: String,
+        nullable: Boolean = true,
+        extra: JsonObjectBuilder.() -> Unit = {},
+    ) {
         putJsonObject(name) {
             put("type", type)
             put("description", description)
             if (nullable) put("nullable", true)
+            extra()
         }
     }
 }

@@ -25,7 +25,7 @@ object PendingCouponBuilder {
             currentValue = value,
             initialValue = value,
             expirationDate = parseExpiration(parsed.expirationDate, zone) ?: (now + ONE_YEAR_MILLIS),
-            categoryId = null,
+            categoryId = parsed.categoryId,
             redeemCode = parsed.redeemCode,
             creationMessage = parsed.description,
             isPending = true,

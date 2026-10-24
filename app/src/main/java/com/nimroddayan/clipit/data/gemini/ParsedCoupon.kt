@@ -7,7 +7,8 @@ data class ParsedCoupon(
         val description: String?,
         val redeemCode: String?,
         val redemptionUrl: String?,
-        val error: String? = null
+        val error: String? = null,
+        val categoryId: Long? = null
 ) {
     companion object {
         const val ERROR_QUOTA = "Quota Limit Reached"
