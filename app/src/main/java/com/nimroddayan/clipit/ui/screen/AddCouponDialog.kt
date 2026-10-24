@@ -124,6 +124,10 @@ fun AddCouponDialog(
                 val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 expiration = sdf.parse(it)?.time
             }
+            // Never override a category the user already picked.
+            if (selectedCategory == null) {
+                selectedCategory = categories.firstOrNull { it.id == coupon.categoryId }
+            }
             couponViewModel.clearParsedCoupon()
         }
     }

@@ -3,10 +3,12 @@ package com.nimroddayan.clipit.data.ai
 import com.nimroddayan.clipit.data.gemini.DetectionMode
 import com.nimroddayan.clipit.data.gemini.GeminiQuotaException
 import com.nimroddayan.clipit.data.gemini.GeminiRestClient
+import com.nimroddayan.clipit.data.model.Category
 import java.io.IOException
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -20,6 +22,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -28,6 +31,7 @@ import org.junit.Test
 class GeminiCloudExtractorTest {
 
     private lateinit var server: MockWebServer
+    private lateinit var client: GeminiRestClient
     private lateinit var extractor: GeminiCloudExtractor
     private val today = LocalDate.of(2026, 10, 2)
     private val settings = AiSettings("key", "gemini-2.5-flash", 0.15f, DetectionMode.LOCAL_HEURISTIC)
@@ -36,7 +40,7 @@ class GeminiCloudExtractorTest {
     fun setUp() {
         server = MockWebServer()
         server.start()
-        val client = GeminiRestClient(OkHttpClient(), server.url("/v1beta/").toString())
+        client = GeminiRestClient(OkHttpClient(), server.url("/v1beta/").toString())
         extractor = GeminiCloudExtractor(client, settings, today)
     }
 
@@ -92,6 +96,47 @@ class GeminiCloudExtractorTest {
     }
 
     @Test
+    fun `without categories the prompt and schema have no category`() = runTest {
+        server.enqueue(reply("""{"storeName":"KSP","category":"Food"}"""))
+
+        val result = extractor.extract("x")
+
+        val body = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+        val properties = body["generationConfig"]!!.jsonObject["responseSchema"]!!.jsonObject["properties"]!!.jsonObject
+        assertFalse(properties.containsKey("category"))
+        assertFalse(systemText(body).contains("category:"))
+        assertNull(result.categoryId)
+    }
+
+
+    @Test
+    fun `categories are offered as an enum and the answer maps to the category id`() = runTest {
+        val categories = listOf(category(1, "Food"), category(2, " Electronics "), category(3, ""), category(4, "food"))
+        extractor = GeminiCloudExtractor(client, settings, today, categories)
+        server.enqueue(reply("""{"storeName":"KSP","category":"electronics"}"""))
+
+        val result = extractor.extract("x")
+
+        val body = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+        val properties = body["generationConfig"]!!.jsonObject["responseSchema"]!!.jsonObject["properties"]!!.jsonObject
+        val enum = properties["category"]!!.jsonObject["enum"]!!.jsonArray.map { it.jsonPrimitive.content }
+        assertEquals(listOf("Food", "Electronics", "food"), enum)
+        assertTrue(systemText(body).contains("\"Food\", \"Electronics\", \"food\""))
+        assertEquals(2L, result.categoryId)
+    }
+
+
+    @Test
+    fun `unknown or null category answers give no category`() {
+        val categories = listOf(category(1, "Food"))
+        assertNull(GeminiCloudExtractor.matchCategory("Travel", categories))
+        assertNull(GeminiCloudExtractor.matchCategory(null, categories))
+        assertNull(GeminiCloudExtractor.matchCategory("  ", categories))
+        assertEquals(1L, GeminiCloudExtractor.matchCategory(" FOOD ", categories))
+    }
+
+
+    @Test
     fun `unparseable model output throws IOException`() = runTest {
         server.enqueue(reply("not json"))
 
@@ -108,6 +153,13 @@ class GeminiCloudExtractorTest {
 
         assertTrue("got $error", error is GeminiQuotaException)
     }
+
+    private fun category(id: Long, name: String) = Category(id = id, name = name, colorHex = "#000000", iconName = "x")
+
+
+    private fun systemText(body: JsonObject): String =
+        body["systemInstruction"]!!.jsonObject["parts"]!!.jsonArray[0].jsonObject["text"]!!.jsonPrimitive.content
+
 
     private fun reply(modelText: String): MockResponse =
         MockResponse().setBody(

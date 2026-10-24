@@ -10,9 +10,11 @@ import com.nimroddayan.clipit.data.gemini.GeminiQuotaException
 import com.nimroddayan.clipit.data.gemini.InvalidApiKeyException
 import com.nimroddayan.clipit.data.gemini.ParsedCoupon
 import com.nimroddayan.clipit.data.gemini.QuotaLimit
+import com.nimroddayan.clipit.data.model.Category
 import java.io.IOException
 import java.time.LocalDate
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.flow.first
 
 /**
  * Entry point for coupon AI: decides whether a message should be extracted, then extracts it with
@@ -20,7 +22,8 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 class CouponParser(
     private val settingsProvider: suspend () -> AiSettings,
-    private val cloudExtractorFactory: (AiSettings, LocalDate) -> CouponExtractor,
+    private val cloudExtractorFactory: (AiSettings, LocalDate, List<Category>) -> CouponExtractor,
+    private val categoriesProvider: suspend () -> List<Category> = { emptyList() },
     private val regexExtractor: CouponExtractor = RegexCouponExtractor(),
     private val detector: CouponDetector = CouponDetector(),
     private val today: () -> LocalDate = LocalDate::now,
@@ -41,7 +44,7 @@ class CouponParser(
             regexExtractor.extract(text)
         } else {
             try {
-                cloudExtractorFactory(settings, date).extract(text)
+                cloudExtractorFactory(settings, date, categoriesProvider()).extract(text)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: GeminiQuotaException) {
@@ -83,9 +86,10 @@ class CouponParser(
             val repository = GeminiApiKeyRepository(app)
             return CouponParser(
                 settingsProvider = repository::currentSettings,
-                cloudExtractorFactory = { settings, date ->
-                    GeminiCloudExtractor(app.geminiRestClient, settings, date)
+                cloudExtractorFactory = { settings, date, categories ->
+                    GeminiCloudExtractor(app.geminiRestClient, settings, date, categories)
                 },
+                categoriesProvider = { app.database.categoryDao().getAll().first() },
             )
         }
     }

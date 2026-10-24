@@ -52,7 +52,7 @@ class CouponAiRetrier(
         val error = parsed.error
         if (error == null) {
             val updated = PendingCouponBuilder.build(parsed, coupon.sourceSender ?: coupon.name, sms, now())
-                .copy(id = coupon.id, categoryId = coupon.categoryId)
+                .copy(id = coupon.id, categoryId = coupon.categoryId ?: parsed.categoryId)
             val owner = updated.redeemCode?.takeIf { it.isNotBlank() }?.let { store.findByRedeemCode(it) }
             if (owner != null && owner.id != coupon.id) {
                 return saveFailure(coupon, ERROR_DUPLICATE, AiStatus.FAILED)

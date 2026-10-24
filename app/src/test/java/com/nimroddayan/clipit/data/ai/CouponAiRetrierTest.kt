@@ -72,6 +72,17 @@ class CouponAiRetrierTest {
     }
 
     @Test
+    fun `success applies the ai category but keeps one the user already set`() = runTest {
+        val picked = aiResult.copy(categoryId = 4)
+
+        val fresh = retrier(FakeStore(failed), picked).retryInBackground(7, false)
+        val userSet = retrier(FakeStore(failed.copy(categoryId = 9)), picked).retryInBackground(7, false)
+
+        assertEquals(4L, (fresh as RetryOutcome.Updated).coupon.categoryId)
+        assertEquals(9L, (userSet as RetryOutcome.Updated).coupon.categoryId)
+    }
+
+    @Test
     fun `transient failure keeps retrying and records the latest error`() = runTest {
         val store = FakeStore(failed.copy(aiError = "old"))
         val outcome = retrier(store, aiResult.copy(error = ParsedCoupon.ERROR_QUOTA)).retryInBackground(7, false)

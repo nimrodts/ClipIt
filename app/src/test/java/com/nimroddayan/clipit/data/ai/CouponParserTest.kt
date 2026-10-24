@@ -6,6 +6,7 @@ import com.nimroddayan.clipit.data.gemini.GeminiQuotaException
 import com.nimroddayan.clipit.data.gemini.InvalidApiKeyException
 import com.nimroddayan.clipit.data.gemini.ParsedCoupon
 import com.nimroddayan.clipit.data.gemini.QuotaLimit
+import com.nimroddayan.clipit.data.model.Category
 import java.io.IOException
 import java.time.LocalDate
 import kotlin.coroutines.cancellation.CancellationException
@@ -36,10 +37,12 @@ class CouponParserTest {
         apiKey: String = "key",
         mode: DetectionMode = DetectionMode.LOCAL_HEURISTIC,
         cloud: FakeExtractor = FakeExtractor { cloudResult },
-        onFactory: (AiSettings, LocalDate) -> Unit = { _, _ -> },
+        categories: List<Category> = emptyList(),
+        onFactory: (AiSettings, LocalDate, List<Category>) -> Unit = { _, _, _ -> },
     ) = CouponParser(
         settingsProvider = { AiSettings(apiKey, "gemini-2.5-flash", 0.15f, mode) },
-        cloudExtractorFactory = { settings, date -> onFactory(settings, date); cloud },
+        cloudExtractorFactory = { settings, date, cats -> onFactory(settings, date, cats); cloud },
+        categoriesProvider = { categories },
         regexExtractor = regex,
         today = { today },
     )
@@ -72,9 +75,22 @@ class CouponParserTest {
     @Test
     fun `cloud factory gets settings and today`() = runTest {
         var seen: Pair<AiSettings, LocalDate>? = null
-        parser(onFactory = { s, d -> seen = s to d }).parse("text")
+        parser(onFactory = { s, d, _ -> seen = s to d }).parse("text")
         assertEquals("gemini-2.5-flash", seen!!.first.modelId)
         assertEquals(today, seen!!.second)
+    }
+
+
+    @Test
+    fun `cloud factory gets the categories and the category survives normalizing`() = runTest {
+        val food = Category(id = 7, name = "Food", colorHex = "#FF0000", iconName = "food")
+        var seen: List<Category>? = null
+        val cloud = FakeExtractor { cloudResult.copy(categoryId = 7) }
+
+        val result = parser(cloud = cloud, categories = listOf(food), onFactory = { _, _, c -> seen = c }).parse("text")
+
+        assertEquals(listOf(food), seen)
+        assertEquals(7L, result.categoryId)
     }
 
     @Test

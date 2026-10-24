@@ -32,6 +32,12 @@ class PendingCouponBuilderTest {
     }
 
     @Test
+    fun `ai picked category is applied`() {
+        assertEquals(4L, build(good.copy(categoryId = 4)).categoryId)
+        assertNull(build(good).categoryId)
+    }
+
+    @Test
     fun `original sms and sender are always kept`() {
         val coupon = build(good)
         assertEquals(sms, coupon.sourceSms)
